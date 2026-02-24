@@ -1,0 +1,128 @@
+<div class="app">
+  <div *ngIf="showNameModal" class="modal-backdrop">
+    <div class="modal">
+      <h2>Welcome to AutoSteer</h2>
+      <p>Enter a username so we can track usage and feedback.</p>
+      <input
+        type="text"
+        [(ngModel)]="nameInput"
+        placeholder="Your name"
+        class="modal-input"
+      />
+      <button class="modal-primary" (click)="submitUsername()">Continue</button>
+    </div>
+  </div>
+
+  <div *ngIf="showFeedbackModal" class="modal-backdrop">
+    <div class="modal">
+      <h2>Rate this run</h2>
+      <p>How was the agent performance?</p>
+      <div class="rating-picker">
+        <button
+          *ngFor="let star of starRange"
+          type="button"
+          [class.active]="star <= feedbackRating"
+          (click)="setRating(star)">
+          ★
+        </button>
+      </div>
+      <textarea
+        [(ngModel)]="feedbackComment"
+        placeholder="Optional feedback"
+        rows="3"
+        class="modal-input"></textarea>
+      <div class="modal-actions">
+        <button class="modal-secondary" (click)="skipFeedback()">Skip</button>
+        <button class="modal-primary" [disabled]="feedbackRating === 0" (click)="submitFeedback()">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <header class="app-header">
+    <div class="header-content">
+      <div class="brand">
+        <span class="brand-mark">Wayfinder AI</span>
+        <span class="brand-sub">Gemini Visual Agent</span>
+      </div>
+      <div class="header-actions">
+        <a class="back-link" routerLink="/" aria-label="Back to landing page">Landing</a>
+        <app-theme-toggle></app-theme-toggle>
+        <span *ngIf="userName" class="user-chip">{{ userName }}</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div class="container">
+      <div class="dashboard">
+        <section class="vision-stack">
+          <div class="vision-panel">
+            <div class="panel-header">
+              <span class="panel-title">Agent Vision</span>
+              <span class="panel-status" [class.active]="!!(loading$ | async)">Live</span>
+            </div>
+            <app-screenshot-viewer 
+              [screenshot]="(task$ | async)?.currentScreenshot || null"
+              [loading]="!!(loading$ | async)"
+              [taskStatus]="(task$ | async)?.status || null"
+              [currentStep]="getCurrentStepDescription(task$ | async)">
+            </app-screenshot-viewer>
+          </div>
+
+          <app-suggestions-panel 
+            [suggestions]="(task$ | async)?.suggestions || []"
+            [loading]="!!(loading$ | async)"
+            (suggestionSelected)="onSuggestionSelected($event)">
+          </app-suggestions-panel>
+
+          <div class="task-dock">
+            <app-task-form (onSubmit)="onTaskSubmit($event)" [loading]="!!(loading$ | async)"></app-task-form>
+          </div>
+        </section>
+
+        <aside class="side-panel">
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h3>Logs & Debug</h3>
+              <span class="toggle-pill">On</span>
+            </div>
+            <app-execution-log 
+              [steps]="(task$ | async)?.steps || []"
+              [loading]="!!(loading$ | async)">
+            </app-execution-log>
+          </div>
+
+          <div class="panel-card ratings-panel-hidden">
+            <div class="panel-card-header">
+              <h3>Ratings</h3>
+              <span class="rating-pill">{{ feedbackSummary.averageRating || 0 }} / 5</span>
+            </div>
+            <div class="rating-stars">
+              <span *ngFor="let star of starRange" [class]="getAverageStarClass(star)">★</span>
+              <span class="rating-count">({{ feedbackSummary.totalRatings }} reviews)</span>
+            </div>
+            <div class="stats-grid">
+              <div>
+                <p class="stat-label">Total users</p>
+                <p class="stat-value">{{ userStats.totalUsers }}</p>
+              </div>
+              <div>
+                <p class="stat-label">Total logins</p>
+                <p class="stat-value">{{ userStats.totalLogins }}</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div *ngIf="(task$ | async)?.error" class="error-banner">
+        <strong>Error:</strong> {{ (task$ | async)?.error }}
+      </div>
+
+      <div *ngIf="(task$ | async)?.status === 'completed' && !(loading$ | async)" class="success-banner">
+        <strong>✓ Task completed successfully!</strong> Executed {{ ((task$ | async)?.steps || []).length }} steps.
+      </div>
+    </div>
+  </main>
+
+</div>

@@ -1,0 +1,68 @@
+<!-- 
+  WAYFINDER AI - Voice-Enhanced Task Form HTML
+  Copy this to: frontend/src/app/components/task-form/task-form.component.html
+  
+  Changes:
+  1. Add voice input button with recording animation
+  2. Add visual feedback for voice recognition
+-->
+
+<form [formGroup]="form" (ngSubmit)="submit()" class="task-form">
+  <div class="form-fields">
+    <!-- URL Input Field -->
+    <div class="task-field">
+      <label for="startUrl" class="sr-only">Website URL</label>
+      <input
+        id="startUrl"
+        formControlName="startUrl"
+        type="url"
+        placeholder="https://example.com"
+        class="form-input"
+      />
+    </div>
+
+    <!-- Task Description with Voice Input -->
+    <div class="task-field grow">
+      <label for="taskDescription" class="sr-only">Task Description</label>
+      <div class="voice-input-container">
+        <textarea
+          id="taskDescription"
+          formControlName="taskDescription"
+          placeholder="Type your task here..."
+          rows="2"
+          class="form-input task-input"
+        ></textarea>
+        
+        <!-- Voice Input Button -->
+        <button
+          *ngIf="canUseVoice"
+          type="button"
+          class="voice-btn"
+          [class.recording]="isRecording"
+          (click)="toggleVoiceInput()"
+          [disabled]="loading"
+          title="Use voice input"
+        >
+          <span *ngIf="!isRecording" class="voice-icon">🎤</span>
+          <span *ngIf="isRecording" class="voice-icon recording-pulse">⏺️</span>
+          <span class="voice-text">{{ isRecording ? 'Listening...' : 'Speak' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit Button -->
+  <button
+    type="submit"
+    class="submit-btn"
+    [disabled]="!form.valid || loading"
+  >
+    {{ loading ? 'Agent is Working...' : 'Start Automation ▶' }}
+  </button>
+
+  <!-- Voice Recording Indicator -->
+  <div *ngIf="isRecording" class="recording-indicator">
+    <div class="pulse-ring"></div>
+    <span>🎤 Listening... Speak your task</span>
+  </div>
+</form>

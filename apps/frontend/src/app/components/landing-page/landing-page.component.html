@@ -1,0 +1,207 @@
+<div class="landing-page">
+  <div class="scroll-lights" aria-hidden="true">
+    <span class="light-orb orb-one"></span>
+    <span class="light-orb orb-two"></span>
+    <span class="light-orb orb-three"></span>
+    <span class="light-streak streak-one"></span>
+    <span class="light-streak streak-two"></span>
+  </div>
+  <div class="landing-nav">
+    <div class="nav-brand">Wayfinder AI</div>
+    <app-theme-toggle></app-theme-toggle>
+  </div>
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-background">
+      <div class="floating-elements">
+        <div class="element" *ngFor="let i of [1,2,3,4,5,6]"></div>
+      </div>
+    </div>
+    
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge-text">Wayfinder AI ✨</span>
+        </div>
+        
+        <h1 class="hero-title">
+          <span class="brand-highlight">Wayfinder AI</span>
+          <br>Visual UI Understanding & Interaction
+        </h1>
+        
+        <p class="hero-description">
+          Build an agent that becomes the user&apos;s hands on screen. Wayfinder AI observes the display,
+          interprets visual elements with or without DOM access, and executes actions based on intent.
+          Powered by Gemini multimodal and hosted on Google Cloud.
+        </p>
+        
+        <div class="hero-actions">
+          <button class="cta-primary" (click)="navigateToApp()">
+            <span>Launch Wayfinder AI</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button class="cta-secondary">
+            <span>View Overview</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M8 5V19L19 12L8 5Z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="hero-stats">
+          <div class="stat">
+            <span class="stat-number">Gemini</span>
+            <span class="stat-label">Multimodal Reasoning</span>
+          </div>
+          <div class="stat">
+            <span class="stat-number">Screen-first</span>
+            <span class="stat-label">No DOM Required</span>
+          </div>
+          <div class="stat">
+            <span class="stat-number">GCP</span>
+            <span class="stat-label">Cloud Hosted Agents</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="hero-visual">
+        <div class="demo-window">
+          <div class="window-header">
+            <div class="window-controls">
+              <div class="control red"></div>
+              <div class="control yellow"></div>
+              <div class="control green"></div>
+            </div>
+            <div class="window-title">Wayfinder AI</div>
+          </div>
+          <div class="window-content">
+            <div class="chat-preview">
+              <div class="message user">
+                <span>Find me the best laptop deals under $1000</span>
+              </div>
+              <div class="message agent">
+                <div class="typing-indicator">
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                </div>
+                <span>I'll search multiple retailers and compare prices for you...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Why Wayfinder AI?</h2>
+        <p class="section-description">
+          Designed for visual UI understanding, precise interaction, and reliable automation across any app
+        </p>
+      </div>
+      
+      <div class="features-grid">
+        <div class="feature-card" *ngFor="let feature of features; let i = index" 
+             [style.animation-delay]="(i * 0.1) + 's'">
+          <div class="feature-icon">{{ feature.icon }}</div>
+          <h3 class="feature-title">{{ feature.title }}</h3>
+          <p class="feature-description">{{ feature.description }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Use Cases Section -->
+  <section class="use-cases">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">What Can Wayfinder AI Do?</h2>
+        <p class="section-description">
+          From universal web navigation to cross-application workflows and visual QA
+        </p>
+      </div>
+      
+      <div class="use-cases-grid">
+        <div class="use-case-card" *ngFor="let useCase of useCases; let i = index"
+             [style.animation-delay]="(i * 0.15) + 's'">
+          <h3 class="use-case-title">{{ useCase.title }}</h3>
+          <p class="use-case-description">{{ useCase.description }}</p>
+          <div class="use-case-example">
+            <div class="example-label">Example:</div>
+            <div class="example-text">{{ useCase.example }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-content">
+        <h2 class="cta-title">Ready to Put an Agent on the Screen?</h2>
+        <p class="cta-description">
+          Build agents that see, decide, and act on real UIs with Gemini multimodal and Google Cloud
+        </p>
+        <button class="cta-primary large" (click)="navigateToApp()">
+          <span>Start Wayfinder AI</span>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <div class="brand-logo">
+            <span class="brand-name">Wayfinder AI</span>
+            <span class="brand-tagline">Screen-first visual agent</span>
+          </div>
+          <p class="footer-summary">
+            Build agents that interpret pixels, understand UI context, and act with precision.
+            Powered by Gemini multimodal and hosted on Google Cloud.
+          </p>
+          <div class="footer-badges">
+            <span class="footer-badge">Gemini Multimodal</span>
+            <span class="footer-badge">GCP Hosted</span>
+            <span class="footer-badge">Screen-first</span>
+          </div>
+        </div>
+        <div class="footer-links">
+          <div class="link-group">
+            <h4>Product</h4>
+            <a href="#">Capabilities</a>
+            <a href="#">Use Cases</a>
+            <a href="#">API</a>
+          </div>
+          <div class="link-group">
+            <h4>Platform</h4>
+            <a href="#">Security</a>
+            <a href="#">Cloud Hosting</a>
+            <a href="#">Status</a>
+          </div>
+          <div class="link-group">
+            <h4>Company</h4>
+            <a href="#">About</a>
+            <a href="#">Research</a>
+            <a href="#">Contact</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Wayfinder AI. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+</div>

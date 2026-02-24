@@ -1,0 +1,29 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="task-form">
+  <div class="task-bar">
+    <div class="task-field">
+      <label for="startUrl" class="sr-only">Website URL</label>
+      <input
+        id="startUrl"
+        type="url"
+        formControlName="startUrl"
+        placeholder="https://google.com"
+        class="form-input url-input"
+      />
+    </div>
+
+    <div class="task-field grow">
+      <label for="taskDescription" class="sr-only">Task Description</label>
+      <textarea
+        id="taskDescription"
+        formControlName="taskDescription"
+        placeholder="Type your task here..."
+        rows="2"
+        class="form-input task-input"
+      ></textarea>
+    </div>
+
+    <button type="submit" [disabled]="loading || !form.valid" class="submit-btn">
+      {{ loading ? 'Running...' : 'Send' }}
+    </button>
+  </div>
+</form>

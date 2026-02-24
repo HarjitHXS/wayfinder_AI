@@ -1,0 +1,12 @@
+<button 
+  class="theme-toggle-btn" 
+  (click)="toggleTheme()"
+  [attr.aria-label]="(theme$ | async) === 'light' ? 'Switch to dark mode' : 'Switch to light mode'">
+  <span class="theme-icon">
+    <ng-container *ngIf="(theme$ | async) === 'light'">🌙</ng-container>
+    <ng-container *ngIf="(theme$ | async) === 'dark'">☀️</ng-container>
+  </span>
+  <span class="theme-text">
+    {{ (theme$ | async) === 'light' ? 'Dark' : 'Light' }} Mode
+  </span>
+</button>

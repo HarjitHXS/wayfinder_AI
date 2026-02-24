@@ -1,0 +1,318 @@
+.agent-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 400px;
+  padding: 40px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-visual {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  margin-bottom: 32px;
+}
+
+.scan-grid {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  opacity: 0.3;
+}
+
+.grid-line {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    var(--border-color) 50%, 
+    transparent 100%
+  );
+  animation: gridPulse 2s ease-in-out infinite;
+}
+
+.scan-beam {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 40px;
+  background: linear-gradient(180deg, 
+    var(--shadow) 0%, 
+    var(--border-light) 50%,
+    transparent 100%
+  );
+  animation: scan 3s ease-in-out infinite;
+  filter: blur(8px);
+}
+
+.brain-icon {
+  width: 100%;
+  height: 100%;
+  color: var(--text-primary);
+  filter: drop-shadow(0 0 20px var(--shadow));
+  animation: brainPulse 2s ease-in-out infinite;
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background-color: var(--text-primary);
+  border-radius: 50%;
+  opacity: 0;
+  animation: particleFloat 3s ease-in-out infinite;
+}
+
+.loading-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  letter-spacing: 0.3px;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  background-color: var(--text-primary);
+  border-radius: 50%;
+  animation: indicatorBlink 1.5s ease-in-out infinite;
+  box-shadow: 0 0 10px var(--shadow);
+}
+
+.loading-message {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  min-height: 22px;
+  letter-spacing: 0.2px;
+  animation: messageFade 3s ease-in-out infinite;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--text-muted);
+  border-radius: 50%;
+  animation: dotBounce 1.4s ease-in-out infinite;
+}
+
+.dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.dot:nth-child(4) {
+  animation-delay: 0.6s;
+}
+
+@keyframes dotBounce {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+.grid-line:nth-child(even) {
+  animation-delay: 0.3s;
+}
+
+@keyframes gridPulse {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes scan {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(240px);
+    opacity: 0;
+  }
+}
+
+.brain-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  height: 120px;
+}
+
+@keyframes brainPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.neuron {
+  animation: neuronFire 1.5s ease-in-out infinite;
+}
+
+.neuron-1 { animation-delay: 0s; }
+.neuron-2 { animation-delay: 0.3s; }
+.neuron-3 { animation-delay: 0.6s; }
+.neuron-4 { animation-delay: 0.9s; }
+.neuron-5 { animation-delay: 1.2s; }
+
+@keyframes neuronFire {
+  0%, 100% {
+    opacity: 0.3;
+    r: 1;
+  }
+  50% {
+    opacity: 1;
+    r: 1.5;
+  }
+}
+
+.thought-particles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+.particle:nth-child(1) {
+  left: 20%;
+  animation-delay: 0s;
+}
+
+.particle:nth-child(2) {
+  left: 40%;
+  animation-delay: 0.5s;
+}
+
+.particle:nth-child(3) {
+  left: 60%;
+  animation-delay: 1s;
+}
+
+.particle:nth-child(4) {
+  left: 80%;
+  animation-delay: 1.5s;
+}
+
+.particle:nth-child(5) {
+  left: 30%;
+  animation-delay: 2s;
+}
+
+.particle:nth-child(6) {
+  left: 70%;
+  animation-delay: 2.5s;
+}
+
+@keyframes particleFloat {
+  0% {
+    transform: translateY(60px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-80px);
+    opacity: 0;
+  }
+}
+
+.loading-content {
+  text-align: center;
+  max-width: 400px;
+}
+
+@keyframes indicatorBlink {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes messageFade {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.progress-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.dot:nth-child(4) {
+  animation-delay: 0.6s;
+}
+
+@keyframes dotBounce {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}

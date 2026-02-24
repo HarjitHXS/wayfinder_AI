@@ -1,0 +1,135 @@
+.execution-log {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  grid-column: 1 / -1;
+}
+
+.execution-log h3 {
+  margin: 0 0 20px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.loading-badge {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.steps-container {
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.panel-card .steps-container {
+  max-height: 280px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.step-item {
+  padding: 16px;
+  margin-bottom: 12px;
+  border-left: 3px solid var(--border-color);
+  background-color: var(--bg-primary);
+  border-radius: 10px;
+  transition: var(--transition);
+  border: 1px solid var(--border-light);
+}
+
+.step-item:hover {
+  background-color: var(--hover-bg);
+  transform: translateX(4px);
+}
+
+.step-item.loading {
+  border-left-color: var(--text-primary);
+  background-color: var(--bg-secondary);
+}
+
+.step-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.step-number {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.step-action {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.step-time {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.step-description {
+  margin: 8px 0;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.step-detail {
+  margin: 6px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 4px 8px;
+  background-color: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.step-result {
+  margin: 8px 0 0 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-light);
+  border-top-color: var(--text-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 700px) {
+  .steps-container {
+    max-height: 360px;
+  }
+}

@@ -1,0 +1,35 @@
+<div class="execution-log">
+  <h3>
+    <span>📋 Execution Log</span>
+    <span *ngIf="loading" class="loading-badge">Running...</span>
+  </h3>
+
+  <div class="steps-container">
+    <div *ngIf="steps.length === 0 && !loading" class="empty-state">
+      <p>No steps executed yet. Start a task to see the agent in action.</p>
+    </div>
+
+    <div *ngFor="let step of steps" class="step-item">
+      <div class="step-header">
+        <span class="step-number">Step {{ step.stepNumber }}</span>
+        <span class="step-action">{{ step.action.type }}</span>
+        <span class="step-time">
+          {{ step.timestamp | date:'short' }}
+        </span>
+      </div>
+      <p class="step-description">{{ step.description }}</p>
+      <p *ngIf="step.action.selector" class="step-detail">
+        <strong>Target:</strong> {{ step.action.selector }}
+      </p>
+      <p *ngIf="step.action.text" class="step-detail">
+        <strong>Text:</strong> {{ step.action.text }}
+      </p>
+      <p class="step-result">✓ {{ step.result }}</p>
+    </div>
+
+    <div *ngIf="loading && steps.length > 0" class="step-item loading">
+      <div class="spinner"></div>
+      <p>Agent is processing the next step...</p>
+    </div>
+  </div>
+</div>

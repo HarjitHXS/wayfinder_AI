@@ -1,0 +1,23 @@
+<div class="screenshot-viewer">
+  <h3>👁️ Agent Vision</h3>
+  <div class="screenshot-container">
+    <!-- Show screenshot when available -->
+    <img
+      *ngIf="screenshot && !loading"
+      [src]="'data:image/png;base64,' + screenshot"
+      alt="Current screenshot"
+      class="screenshot-image"
+    />
+    
+    <!-- Show loading state when task is running -->
+    <app-agent-loading-state 
+      *ngIf="loading && taskStatus === 'running'"
+      [currentStep]="currentStep"
+    ></app-agent-loading-state>
+    
+    <!-- Show idle state when no task is running and no screenshot -->
+    <app-agent-idle-state 
+      *ngIf="!screenshot && !loading"
+    ></app-agent-idle-state>
+  </div>
+</div>
