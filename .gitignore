@@ -1,40 +1,33 @@
-node_modules
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+build/
+.angular/
+.nx/
+apps/*/dist/
+apps/*/.angular/
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+firebase.json
+firestore.indexes.json
+firestore.rules
+*.json.key
+apps/backend/.gcp-key.json
+apps/frontend/src/environments/firebase.config.ts
+*-firebase-adminsdk*.json
 
 # IDE
 .idea/
 .vscode/
+*.swp
+*.swo
 
 # OS
 .DS_Store
-
-# Angular/Nx caches and build output
-.angular/cache/
-.angular/
-.nx/
-dist/
-coverage/
-tmp/
-
-# Logs
-*.log
-
-# Environment files and secrets
-.env
-.env.*
-!.env.example
-.gcp-key.json
-**/.env
-**/.env.*
-
-# Lock files (regeneratable)
-package-lock.json
-yarn.lock
-*.json
-!firebase.config.json
-
-# Firebase config (contains secrets)
-apps/frontend/src/environments/firebase.config.ts
-
-# Backend environment files
-apps/backend/.env
-apps/backend/.env.example
+Thumbs.db
