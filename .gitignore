@@ -31,3 +31,10 @@ package-lock.json
 yarn.lock
 *.json
 !firebase.config.json
+
+# Firebase config (contains secrets)
+apps/frontend/src/environments/firebase.config.ts
+
+# Backend environment files
+apps/backend/.env
+apps/backend/.env.example
