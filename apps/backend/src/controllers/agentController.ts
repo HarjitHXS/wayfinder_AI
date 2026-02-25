@@ -4,10 +4,13 @@ import { TaskQueue, QueueItem } from '../utils/queue';
 import sessionManager from '../utils/sessionManager';
 import browserPool from '../utils/browserPool';
 import { randomUUID } from 'crypto';
+import { AuthRequest } from '../middleware/auth';
+import { saveTask } from '../utils/historyManager';
 
 interface ExecuteRequest {
   taskDescription: string;
   startUrl: string;
+  uid?: string;
 }
 
 // Initialize browser pool on startup
@@ -29,11 +32,16 @@ const queue = new TaskQueue<ExecuteRequest>(async (item: QueueItem<ExecuteReques
   try {
     console.log(`[Queue] Processing task ${item.id}`);
 
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'wayfinder-demo';
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'autosteer';
     const manager = new AgentManager(projectId);
 
     const task = await manager.executeTask(item.data.taskDescription, item.data.startUrl, item.id);
     sessionManager.updateSession(item.id, task);
+
+    // Persist to Firestore if user was authenticated
+    if (item.data.uid) {
+      await saveTask(item.data.uid, task);
+    }
 
     console.log(`[Queue] ✅ Completed task ${item.id}`);
   } catch (error) {
@@ -49,10 +57,15 @@ const queue = new TaskQueue<ExecuteRequest>(async (item: QueueItem<ExecuteReques
       updatedAt: new Date(),
     };
     sessionManager.updateSession(item.id, errorTask);
+
+    // Persist failed tasks too for history
+    if (item.data.uid) {
+      await saveTask(item.data.uid, errorTask);
+    }
   }
 });
 
-export async function executeTask(req: Request, res: Response) {
+export async function executeTask(req: AuthRequest, res: Response) {
   try {
     const { taskDescription, startUrl } = req.body as ExecuteRequest;
 
@@ -74,9 +87,9 @@ export async function executeTask(req: Request, res: Response) {
       updatedAt: new Date(),
     };
 
-    // Create session and queue task
+    // Create session and queue task (include uid if authenticated)
     sessionManager.createSession(sessionId, pendingTask);
-    queue.enqueue(sessionId, { taskDescription, startUrl });
+    queue.enqueue(sessionId, { taskDescription, startUrl, uid: req.user?.uid });
 
     res.json({
       sessionId,
@@ -118,7 +131,7 @@ export async function analyzeWebsite(req: Request, res: Response) {
     await initializeBrowserPool();
 
     console.log('[analyzeWebsite] Analyzing:', url);
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'wayfinder-demo';
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'autosteer';
     const manager = new AgentManager(projectId);
 
     const analysis = await manager.analyzeWebsite(url);
@@ -142,15 +155,3 @@ export async function cleanupSession(req: Request, res: Response) {
   }
 }
 
-export async function getStats(req: Request, res: Response) {
-  try {
-    const stats = sessionManager.getStats();
-    res.json({
-      queueLength: queue.getQueueLength(),
-      isProcessing: queue.isProcessing(),
-      ...stats,
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to get stats' });
-  }
-}

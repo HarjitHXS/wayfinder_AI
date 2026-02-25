@@ -1,38 +1,10 @@
 <div class="agent-loading">
   <div class="loading-visual">
-    <div class="scan-grid">
-      <div class="grid-line" *ngFor="let i of [1,2,3,4,5,6,7,8]"></div>
-    </div>
-    <div class="scan-beam"></div>
-    
-    <div class="brain-container">
-      <svg class="brain-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2C10.8954 2 10 2.89543 10 4C10 4.74028 10.4022 5.38663 11 5.73244V7H9C7.34315 7 6 8.34315 6 10V11C4.89543 11 4 11.8954 4 13C4 14.1046 4.89543 15 6 15V16C6 17.6569 7.34315 19 9 19H11V20.2676C10.4022 20.6134 10 21.2597 10 22C10 23.1046 10.8954 24 12 24C13.1046 24 14 23.1046 14 22C14 21.2597 13.5978 20.6134 13 20.2676V19H15C16.6569 19 18 17.6569 18 16V15C19.1046 15 20 14.1046 20 13C20 11.8954 19.1046 11 18 11V10C18 8.34315 16.6569 7 15 7H13V5.73244C13.5978 5.38663 14 4.74028 14 4C14 2.89543 13.1046 2 12 2Z" stroke="currentColor" stroke-width="2"/>
-        <circle cx="9" cy="11" r="1" fill="currentColor" class="neuron neuron-1"/>
-        <circle cx="15" cy="11" r="1" fill="currentColor" class="neuron neuron-2"/>
-        <circle cx="12" cy="13" r="1" fill="currentColor" class="neuron neuron-3"/>
-        <circle cx="9" cy="15" r="1" fill="currentColor" class="neuron neuron-4"/>
-        <circle cx="15" cy="15" r="1" fill="currentColor" class="neuron neuron-5"/>
-      </svg>
-      
-      <div class="thought-particles">
-        <div class="particle" *ngFor="let i of [1,2,3,4,5,6]"></div>
-      </div>
-    </div>
+    <div class="spinner"></div>
   </div>
   
   <div class="loading-content">
-    <h3 class="loading-title">
-      <span class="status-indicator"></span>
-      Agent Processing
-    </h3>
-    <p class="loading-message">{{ currentStep || currentMessage }}</p>
-    
-    <div class="progress-dots">
-      <span class="dot"></span>
-      <span class="dot"></span>
-      <span class="dot"></span>
-      <span class="dot"></span>
-    </div>
+    <h3 class="loading-title">Working on it...</h3>
+    <p class="loading-message">{{ currentStep || 'Please wait' }}</p>
   </div>
 </div>

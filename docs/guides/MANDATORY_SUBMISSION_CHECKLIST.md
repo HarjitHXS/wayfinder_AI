@@ -41,7 +41,7 @@ gcloud run deploy wayfinder-backend \
 **Must show**:
 - How Gemini connects to backend
 - Browser automation flow
-- Frontend → Backend → Vertex AI → Puppeteer
+- Frontend → Backend → Vertex AI → Playwright
 
 ### 3. ❌ Demo Video (MANDATORY - Max 4 minutes)
 **Status**: ❌ **MISSING**

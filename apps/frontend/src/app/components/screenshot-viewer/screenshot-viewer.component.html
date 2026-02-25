@@ -4,14 +4,14 @@
     <!-- Show screenshot when available -->
     <img
       *ngIf="screenshot && !loading"
-      [src]="'data:image/png;base64,' + screenshot"
+      [src]="'data:image/jpeg;base64,' + screenshot"
       alt="Current screenshot"
       class="screenshot-image"
     />
     
-    <!-- Show loading state when task is running -->
+    <!-- Show loading state when waiting for task -->
     <app-agent-loading-state 
-      *ngIf="loading && taskStatus === 'running'"
+      *ngIf="loading"
       [currentStep]="currentStep"
     ></app-agent-loading-state>
     

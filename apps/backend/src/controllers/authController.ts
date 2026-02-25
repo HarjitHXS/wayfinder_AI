@@ -1,0 +1,231 @@
+import { Request, Response } from 'express';
+import { isFirebaseEnabled, getFirestore, getFirebaseAuth } from '../firebase/admin';
+import { AuthRequest } from '../middleware/auth';
+import admin from 'firebase-admin';
+
+/**
+ * Creates or updates user document in Firestore
+ */
+export async function createOrUpdateUser(uid: string, email?: string, displayName?: string) {
+  if (!isFirebaseEnabled()) {
+    return null;
+  }
+
+  try {
+    const db = getFirestore();
+    const userRef = db.collection('users').doc(uid);
+
+    const userData = {
+      uid,
+      email: email || '',
+      displayName: displayName || 'User',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      subscription: {
+        plan: 'free',
+        tasksRemaining: 10,
+        tasksUsed: 0,
+        resetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      },
+      settings: {
+        notifications: true,
+        theme: 'auto',
+      },
+    };
+
+    // Use set with merge to update existing docs
+    await userRef.set(userData, { merge: true });
+    return userData;
+  } catch (error) {
+    console.error('[AuthController] Error creating/updating user:', error);
+    throw error;
+  }
+}
+
+/**
+ * GET /api/auth/verify
+ * Verifies if Firebase is enabled and user is authenticated
+ */
+export async function verifyAuth(req: AuthRequest, res: Response) {
+  if (!isFirebaseEnabled()) {
+    return res.status(503).json({
+      enabled: false,
+      message: 'Firebase authentication is not configured',
+    });
+  }
+
+  if (req.user) {
+    return res.json({
+      enabled: true,
+      authenticated: true,
+      user: req.user,
+    });
+  }
+
+  return res.json({
+    enabled: true,
+    authenticated: false,
+    message: 'User not authenticated. Please login to save your task history.',
+  });
+}
+
+/**
+ * POST /api/auth/signup
+ * Creates a new user account
+ */
+export async function signup(req: Request, res: Response) {
+  if (!isFirebaseEnabled()) {
+    return res.status(503).json({ error: 'Authentication not available' });
+  }
+
+  const { email, password, displayName } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
+  try {
+    const auth = getFirebaseAuth();
+    
+    // Create Firebase user
+    const userRecord = await auth.createUser({
+      email,
+      password,
+      displayName: displayName || 'User',
+    });
+
+    // Create user document in Firestore
+    await createOrUpdateUser(userRecord.uid, email, displayName);
+
+    return res.status(201).json({
+      message: 'User created successfully',
+      uid: userRecord.uid,
+      email: userRecord.email,
+    });
+  } catch (error: any) {
+    console.error('[AuthController] Signup error:', error);
+
+    if (error.code === 'auth/email-already-exists') {
+      return res.status(409).json({ error: 'Email already in use' });
+    }
+
+    return res.status(500).json({ error: error.message || 'Failed to create user' });
+  }
+}
+
+/**
+ * POST /api/auth/login
+ * This is handled client-side with Firebase SDK
+ * This endpoint is just for documentation/testing
+ */
+export async function login(req: Request, res: Response) {
+  if (!isFirebaseEnabled()) {
+    return res.status(503).json({ error: 'Authentication not available' });
+  }
+
+  return res.json({
+    message: 'Use Firebase Client SDK for login. After login, include ID token in Authorization header.',
+    example: 'Authorization: Bearer <idToken>',
+  });
+}
+
+/**
+ * POST /api/auth/logout
+ * Client-side logout (just for API consistency)
+ */
+export async function logout(req: AuthRequest, res: Response) {
+  return res.json({
+    message: 'Logout successful. Remove the token from your client.',
+  });
+}
+
+/**
+ * GET /api/auth/profile
+ * Get user profile information
+ */
+export async function getUserProfile(req: AuthRequest, res: Response) {
+  if (!isFirebaseEnabled() || !req.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  try {
+    const db = getFirestore();
+    const userDoc = await db.collection('users').doc(req.user.uid).get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    return res.json(userDoc.data());
+  } catch (error) {
+    console.error('[AuthController] Error getting profile:', error);
+    return res.status(500).json({ error: 'Failed to get profile' });
+  }
+}
+
+/**
+ * PUT /api/auth/profile
+ * Update user profile
+ */
+export async function updateUserProfile(req: AuthRequest, res: Response) {
+  if (!isFirebaseEnabled() || !req.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const { displayName, theme, notifications } = req.body;
+
+  try {
+    const db = getFirestore();
+    const updateData: any = {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (displayName) updateData.displayName = displayName;
+    if (theme) updateData['settings.theme'] = theme;
+    if (notifications !== undefined) updateData['settings.notifications'] = notifications;
+
+    await db.collection('users').doc(req.user.uid).update(updateData);
+
+    return res.json({
+      message: 'Profile updated successfully',
+      user: {
+        uid: req.user.uid,
+        ...updateData,
+      },
+    });
+  } catch (error) {
+    console.error('[AuthController] Error updating profile:', error);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
+}
+
+/**
+ * GET /api/auth/subscription
+ * Get user subscription info
+ */
+export async function getSubscription(req: AuthRequest, res: Response) {
+  if (!isFirebaseEnabled() || !req.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  try {
+    const db = getFirestore();
+    const userDoc = await db.collection('users').doc(req.user.uid).get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userData = userDoc.data();
+    return res.json({
+      uid: req.user.uid,
+      plan: userData?.subscription?.plan || 'free',
+      tasksRemaining: userData?.subscription?.tasksRemaining || 0,
+      tasksUsed: userData?.subscription?.tasksUsed || 0,
+      resetDate: userData?.subscription?.resetDate,
+    });
+  } catch (error) {
+    console.error('[AuthController] Error getting subscription:', error);
+    return res.status(500).json({ error: 'Failed to get subscription' });
+  }
+}

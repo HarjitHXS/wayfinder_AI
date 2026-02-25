@@ -2,6 +2,9 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { AgentService, Task, Suggestion } from '../../services/agent.service';
 import { UserService, UserStats, FeedbackSummary } from '../../services/user.service';
 import { ThemeService, Theme } from '../../services/theme.service';
+import { FirebaseAuthService, UserProfile } from '../../services/firebase-auth.service';
+import { AuthModalService } from '../../services/auth-modal.service';
+import { ApiService } from '../../services/api.service';
 import { Observable, Subscription } from 'rxjs';
 
 @Component({
@@ -13,6 +16,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   task$: Observable<Task | null>;
   loading$: Observable<boolean>;
   theme$: Observable<Theme>;
+  userProfile$: Observable<UserProfile | null>;
   sessionId: string | null = null;
 
   userName = '';
@@ -29,54 +33,103 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   starRange = [1, 2, 3, 4, 5];
   private taskSub?: Subscription;
+  private authSub?: Subscription;
   private lastTaskStatus: string | null = null;
+  sidePanel: 'logs' | 'history' = 'logs';
+  historyTasks: any[] = [];
+  historyLoading = false;
+  historyError: string | null = null;
   private feedbackShownForSession: string | null = null;
 
+  // 10-minute trial period for unauthenticated users
+  private readonly TRIAL_DURATION = 10 * 60 * 1000; // 10 minutes
+  private trialTimer: any = null;
+  private isAuthenticated = false;
+  showTrialExpired = false;
+
   constructor(
-    private agentService: AgentService, 
+    private agentService: AgentService,
     private userService: UserService,
-    private themeService: ThemeService
+    private themeService: ThemeService,
+    private authService: FirebaseAuthService,
+    private authModalService: AuthModalService,
+    private apiService: ApiService
   ) {
     this.task$ = this.agentService.getTask();
     this.loading$ = this.agentService.getLoading();
     this.theme$ = this.themeService.theme$;
+    this.userProfile$ = this.authService.userProfile$;
   }
 
   ngOnInit(): void {
-    // Temporarily disabled Firebase features for UI testing
-    // const storedName = localStorage.getItem('autosteer_username');
-    // if (storedName) {
-    //   this.userName = storedName;
-    //   this.nameInput = storedName;
-    //   this.loginUser();
-    // } else {
-    //   this.showNameModal = true;
-    // }
-
-    // this.loadStats();
+    // Track auth state
+    this.authSub = this.authService.isAuthenticated().subscribe(auth => {
+      this.isAuthenticated = auth;
+      if (auth) {
+        // Clear trial timer when user signs in
+        this.clearTrialTimer();
+        this.showTrialExpired = false;
+      } else {
+        // Start 10-minute trial timer for unauthenticated users
+        this.startTrialTimer();
+      }
+    });
 
     this.taskSub = this.task$.subscribe((task) => {
       if (!task) return;
 
       if (this.lastTaskStatus !== task.status) {
         this.lastTaskStatus = task.status;
-
-        // Temporarily disabled feedback modal
-        // if (task.status === 'completed' && this.sessionId) {
-        //   if (this.feedbackShownForSession !== this.sessionId) {
-        //     this.showFeedbackModal = true;
-        //     this.feedbackRating = 0;
-        //     this.feedbackComment = '';
-        //     this.feedbackSubmitted = false;
-        //     this.feedbackShownForSession = this.sessionId;
-        //   }
-        // }
       }
     });
   }
 
   ngOnDestroy(): void {
     this.taskSub?.unsubscribe();
+    this.authSub?.unsubscribe();
+    this.clearTrialTimer();
+  }
+
+  async loadHistory(): Promise<void> {
+    this.historyLoading = true;
+    this.historyError = null;
+    try {
+      this.historyTasks = await this.apiService.getTaskHistory();
+    } catch (error) {
+      console.error('Error loading history:', error);
+      this.historyError = 'Failed to load task history';
+      this.historyTasks = [];
+    } finally {
+      this.historyLoading = false;
+    }
+  }
+
+  switchPanel(panel: 'logs' | 'history'): void {
+    this.sidePanel = panel;
+    if (panel === 'history') {
+      this.loadHistory();
+    }
+  }
+
+  getStatusIcon(status: string): string {
+    switch (status) {
+      case 'completed':
+        return '✅';
+      case 'failed':
+        return '❌';
+      default:
+        return '⏳';
+    }
+  }
+
+  formatHistoryDate(date: any): string {
+    const d = new Date(date);
+    return d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   toggleTheme(): void {
@@ -84,12 +137,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   async onTaskSubmit(event: { taskDescription: string; startUrl: string }): Promise<void> {
+    // Prevent task submission if trial has expired
+    if (this.showTrialExpired) {
+      return;
+    }
+
     try {
-      // Temporarily disabled username check
-      // if (!this.userName) {
-      //   this.showNameModal = true;
-      //   return;
-      // }
 
       const sessionId = await this.agentService.executeTask(
         event.taskDescription,
@@ -103,37 +156,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
-  onSuggestionSelected(suggestion: Suggestion): void {
-    // Get current task to extract the URL
-    this.task$.subscribe((task) => {
-      if (task) {
-        // Find the current URL from the task
-        let currentUrl = 'https://google.com'; // Default fallback
 
-        // First, try to use the stored startUrl
-        if (task.startUrl) {
-          currentUrl = task.startUrl;
-        } else if (task.steps && task.steps.length > 0) {
-          // Look for a navigate action in the steps
-          for (const step of task.steps) {
-            if (step.action.type === 'navigate' && step.action.url) {
-              currentUrl = step.action.url;
-              break;
-            }
-          }
-        }
-
-        // Use the suggestion text as the next task description
-        const nextTaskDescription = suggestion.text;
-        
-        // Auto-submit the suggestion as a new task
-        this.onTaskSubmit({
-          taskDescription: nextTaskDescription,
-          startUrl: currentUrl
-        });
-      }
-    }).unsubscribe();
-  }
 
   async submitUsername(): Promise<void> {
     const name = this.nameInput.trim();
@@ -199,6 +222,44 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.feedbackSummary = feedbackSummary;
     } catch (error) {
       console.error('Error loading stats:', error);
+    }
+  }
+
+  private startTrialTimer(): void {
+    this.clearTrialTimer();
+    this.trialTimer = setTimeout(() => {
+      // Trial expired - reset everything
+      this.agentService.resetTask();
+      this.sessionId = null;
+      this.lastTaskStatus = null;
+      this.showTrialExpired = true;
+    }, this.TRIAL_DURATION);
+  }
+
+  private clearTrialTimer(): void {
+    if (this.trialTimer) {
+      clearTimeout(this.trialTimer);
+      this.trialTimer = null;
+    }
+  }
+
+  dismissTrialExpired(): void {
+    this.showTrialExpired = false;
+  }
+
+  openAuthModal(): void {
+    this.authModalService.open();
+  }
+
+  async signOut(): Promise<void> {
+    try {
+      await this.authService.signOut();
+      this.clearTrialTimer();
+      // After signing out, restart the trial timer
+      this.startTrialTimer();
+    } catch (error) {
+      console.error('Error signing out:', error);
+      alert('Failed to sign out. Please try again.');
     }
   }
 }

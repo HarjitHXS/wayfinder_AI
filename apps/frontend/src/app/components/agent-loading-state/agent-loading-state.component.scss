@@ -1,318 +1,204 @@
+// ── Agent Loading State ─────────────────────────────
+
 .agent-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
-  min-height: 400px;
+  min-height: 380px;
   padding: 40px 20px;
-  position: relative;
-  overflow: hidden;
+  text-align: center;
 }
 
+// ── Orbital spinner (accent ring) ──────────────────
 .loading-visual {
+  margin-bottom: 28px;
   position: relative;
-  width: 280px;
-  height: 280px;
-  margin-bottom: 32px;
-}
-
-.scan-grid {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  opacity: 0.3;
-}
-
-.grid-line {
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    var(--border-color) 50%, 
-    transparent 100%
-  );
-  animation: gridPulse 2s ease-in-out infinite;
-}
-
-.scan-beam {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 40px;
-  background: linear-gradient(180deg, 
-    var(--shadow) 0%, 
-    var(--border-light) 50%,
-    transparent 100%
-  );
-  animation: scan 3s ease-in-out infinite;
-  filter: blur(8px);
-}
-
-.brain-icon {
-  width: 100%;
-  height: 100%;
-  color: var(--text-primary);
-  filter: drop-shadow(0 0 20px var(--shadow));
-  animation: brainPulse 2s ease-in-out infinite;
-}
-
-.particle {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  background-color: var(--text-primary);
-  border-radius: 50%;
-  opacity: 0;
-  animation: particleFloat 3s ease-in-out infinite;
-}
-
-.loading-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 12px;
+  width: 64px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  letter-spacing: 0.3px;
 }
 
-.status-indicator {
-  width: 8px;
-  height: 8px;
-  background-color: var(--text-primary);
+.spinner {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border: 3px solid var(--accent-dim);
+  border-top-color: var(--accent);
   border-radius: 50%;
-  animation: indicatorBlink 1.5s ease-in-out infinite;
-  box-shadow: 0 0 10px var(--shadow);
+  animation: spin 0.9s linear infinite;
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+// Inner dot
+.loading-visual::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--accent);
+  animation: dot-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// ── Text ──────────────────────────────────────────────
+.loading-content {
+  text-align: center;
+}
+
+.loading-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 10px 0;
+  letter-spacing: 0.2px;
 }
 
 .loading-message {
-  font-size: 15px;
-  color: var(--text-secondary);
-  margin-bottom: 24px;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0;
   min-height: 22px;
   letter-spacing: 0.2px;
   animation: messageFade 3s ease-in-out infinite;
 }
 
+@keyframes messageFade {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+// ── Dot row ───────────────────────────────────────────
 .dot {
-  width: 8px;
-  height: 8px;
-  background-color: var(--text-muted);
+  width: 7px;
+  height: 7px;
+  background-color: var(--accent);
   border-radius: 50%;
   animation: dotBounce 1.4s ease-in-out infinite;
+  opacity: 0.6;
 }
 
-.dot:nth-child(1) {
-  animation-delay: 0s;
-}
-
-.dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-.dot:nth-child(4) {
-  animation-delay: 0.6s;
-}
+.dot:nth-child(1) { animation-delay: 0s; }
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+.dot:nth-child(4) { animation-delay: 0.6s; }
 
 @keyframes dotBounce {
-  0%, 80%, 100% {
-    transform: scale(0.8);
-    opacity: 0.4;
-  }
-  40% {
-    transform: scale(1.2);
-    opacity: 1;
-  }
-}
-.grid-line:nth-child(even) {
-  animation-delay: 0.3s;
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(-6px); opacity: 1; }
 }
 
-@keyframes gridPulse {
-  0%, 100% {
-    opacity: 0.2;
+// ── Responsive ───────────────────────────────────
+@media (max-width: 768px) {
+  .agent-loading {
+    min-height: 280px;
+    padding: 24px 16px;
   }
-  50% {
-    opacity: 0.6;
-  }
-}
 
-@keyframes scan {
-  0% {
-    transform: translateY(0);
-    opacity: 0;
+  .loading-visual {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 20px;
   }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(240px);
-    opacity: 0;
-  }
-}
 
-.brain-container {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 120px;
-  height: 120px;
-}
-
-@keyframes brainPulse {
-  0%, 100% {
-    transform: scale(1);
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border-width: 2.5px;
   }
-  50% {
-    transform: scale(1.05);
+
+  .loading-visual::after {
+    width: 9px;
+    height: 9px;
+  }
+
+  .loading-title {
+    font-size: 15px;
+    margin-bottom: 8px;
+  }
+
+  .loading-message {
+    font-size: 12px;
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
   }
 }
 
-.neuron {
-  animation: neuronFire 1.5s ease-in-out infinite;
-}
-
-.neuron-1 { animation-delay: 0s; }
-.neuron-2 { animation-delay: 0.3s; }
-.neuron-3 { animation-delay: 0.6s; }
-.neuron-4 { animation-delay: 0.9s; }
-.neuron-5 { animation-delay: 1.2s; }
-
-@keyframes neuronFire {
-  0%, 100% {
-    opacity: 0.3;
-    r: 1;
+@media (max-width: 600px) {
+  .agent-loading {
+    min-height: 220px;
+    padding: 20px 12px;
   }
-  50% {
-    opacity: 1;
-    r: 1.5;
+
+  .loading-visual {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 16px;
   }
-}
 
-.thought-particles {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-}
-
-.particle:nth-child(1) {
-  left: 20%;
-  animation-delay: 0s;
-}
-
-.particle:nth-child(2) {
-  left: 40%;
-  animation-delay: 0.5s;
-}
-
-.particle:nth-child(3) {
-  left: 60%;
-  animation-delay: 1s;
-}
-
-.particle:nth-child(4) {
-  left: 80%;
-  animation-delay: 1.5s;
-}
-
-.particle:nth-child(5) {
-  left: 30%;
-  animation-delay: 2s;
-}
-
-.particle:nth-child(6) {
-  left: 70%;
-  animation-delay: 2.5s;
-}
-
-@keyframes particleFloat {
-  0% {
-    transform: translateY(60px);
-    opacity: 0;
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border-width: 2px;
   }
-  10% {
-    opacity: 1;
+
+  .loading-visual::after {
+    width: 7px;
+    height: 7px;
   }
-  90% {
-    opacity: 1;
+
+  .loading-title {
+    font-size: 14px;
   }
-  100% {
-    transform: translateY(-80px);
-    opacity: 0;
+
+  .loading-message {
+    font-size: 11px;
+    min-height: 18px;
+  }
+
+  .dot {
+    width: 5px;
+    height: 5px;
   }
 }
 
-.loading-content {
-  text-align: center;
-  max-width: 400px;
-}
-
-@keyframes indicatorBlink {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
+@media (max-width: 380px) {
+  .agent-loading {
+    min-height: 180px;
+    padding: 16px 10px;
   }
-  50% {
-    opacity: 0.3;
-    transform: scale(0.8);
+
+  .loading-visual {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 12px;
   }
-}
 
-@keyframes messageFade {
-  0%, 100% {
-    opacity: 0.7;
+  .spinner {
+    width: 32px;
+    height: 32px;
   }
-  50% {
-    opacity: 1;
+
+  .loading-title {
+    font-size: 13px;
   }
-}
 
-.progress-dots {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-
-.dot:nth-child(1) {
-  animation-delay: 0s;
-}
-
-.dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-.dot:nth-child(4) {
-  animation-delay: 0.6s;
-}
-
-@keyframes dotBounce {
-  0%, 80%, 100% {
-    transform: scale(0.8);
-    opacity: 0.4;
-  }
-  40% {
-    transform: scale(1.2);
-    opacity: 1;
+  .loading-message {
+    font-size: 10px;
   }
 }

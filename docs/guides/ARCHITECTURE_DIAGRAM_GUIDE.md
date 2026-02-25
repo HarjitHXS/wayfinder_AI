@@ -66,7 +66,7 @@ For your Devpost submission, create a diagram showing this architecture:
 │  ┌─────────────────────┐    ┌─────────────────────────────────┐    │
 │  │   GEMINI CLIENT     │    │  BROWSER CONTROLLER             │    │
 │  │                     │    │                                 │    │
-│  │ - Screenshot        │    │ - Puppeteer integration        │    │
+  │  │ - Screenshot        │    │ - Playwright integration        │    │
 │  │   analysis          │    │ - Browser pool management      │    │
 │  │ - Decision making   │    │ - Action execution:            │    │
 │  │ - Task completion   │    │   * Click                      │    │
@@ -165,7 +165,7 @@ graph TB
     end
 
     subgraph External["External"]
-        Puppeteer[Chromium Browser]
+        Playwright[Chromium Browser]
         Web[Target Websites]
     end
 
@@ -174,10 +174,10 @@ graph TB
     Manager --> Gemini
     Manager --> Browser
     Gemini -->|Analyze Screenshots| VertexAI
-    Browser --> Puppeteer
-    Puppeteer -->|Automate| Web
-    Web -->|Screenshots| Puppeteer
-    Puppeteer --> Manager
+    Browser --> Playwright
+    Playwright -->|Automate| Web
+    Web -->|Screenshots| Playwright
+    Playwright --> Manager
     Manager -->|Task Updates| API
     API -->|JSON + Screenshots| UI
     Log -->|Narrate Steps| Voice
@@ -207,7 +207,7 @@ graph TB
 - "Visual Understanding" near screenshot analysis
 - "Google Cloud Native" near GCP services
 - "Agent Decision Loop" near Agent Manager
-- "Browser Automation" near Puppeteer
+- "Browser Automation" near Playwright
 
 ## Export Settings:
 

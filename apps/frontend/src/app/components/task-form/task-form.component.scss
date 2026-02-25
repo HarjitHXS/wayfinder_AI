@@ -1,18 +1,31 @@
+// ── Task Form — AI Chat Prompt Bar ─────────────────
 
 .task-form {
   width: 100%;
 }
 
+// ── Main Bar ────────────────────────────────────────
 .task-bar {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 14px;
-  padding: 10px 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 10px 14px;
   flex-wrap: wrap;
-  transition: var(--transition);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: var(--glass-shadow);
+}
+
+.task-bar:focus-within {
+  border-color: var(--accent-glow);
+  box-shadow:
+    var(--glass-shadow),
+    0 0 0 1px var(--accent-dim),
+    0 0 20px var(--accent-dim);
 }
 
 .task-field {
@@ -24,59 +37,241 @@
   flex: 1;
 }
 
+// ── Inputs ───────────────────────────────────────────
 .form-input {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border-light);
+  padding: 12px 14px;
+  border: 1px solid transparent;
   border-radius: 10px;
   font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
-  font-size: 14px;
-  background-color: var(--bg-primary);
+  font-size: 16px;
+  background: transparent;
   color: var(--text-primary);
-  transition: var(--transition);
+  transition: all 0.2s ease;
   resize: none;
+}
+
+.form-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.9;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--border-color);
-  box-shadow: 0 0 0 2px var(--shadow);
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-primary);
 }
 
 .form-input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+// URL input: pill-shaped, more compact
+.url-input {
+  min-width: 180px;
+  max-width: 240px;
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  font-size: 15px;
+  padding: 10px 14px;
+}
+
+.url-input:focus {
+  border-color: var(--accent-glow) !important;
+  background: var(--accent-dim);
+}
+
+// Task text area: transparent, max width
+.task-input {
+  min-height: 40px;
+  max-height: 100px;
+  flex: 1 1 auto;
+  border: none;
+  padding: 10px 12px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+// ── Voice Input Container ─────────────────────────────
+.voice-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.voice-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--text-muted);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-height: 44px;
+  letter-spacing: 0.3px;
+}
+
+.voice-btn:hover:not(:disabled) {
+  border-color: var(--accent-glow);
+  color: var(--accent);
+  background: var(--accent-dim);
+  box-shadow: 0 0 12px var(--accent-dim);
+}
+
+.voice-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.url-input {
-  min-width: 220px;
+.voice-btn.recording {
+  border-color: #f87171;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  animation: recording-glow 1.8s ease-in-out infinite;
 }
 
-.task-input {
-  min-height: 42px;
+@keyframes recording-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(248, 113, 113, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(248, 113, 113, 0.5); }
 }
 
+.voice-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.voice-text {
+  font-size: 14px;
+}
+
+.recording-pulse {
+  animation: recording-pulse 1s ease-in-out infinite;
+}
+
+// ── Submit / Stop Buttons ────────────────────────────
 .submit-btn {
-  padding: 10px 18px;
-  background-color: var(--text-primary);
-  color: var(--bg-primary);
-  border: 1px solid var(--text-primary);
+  padding: 11px 20px;
   border-radius: 10px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.2s ease;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.7px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 44px;
 }
 
-.submit-btn:hover:not(:disabled) {
-  opacity: 0.8;
+.send-btn {
+  background: var(--accent);
+  color: #000;
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 16px var(--accent-dim);
 }
 
-.submit-btn:disabled {
-  opacity: 0.4;
+.send-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  box-shadow: 0 0 24px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+.send-btn:disabled {
+  opacity: 0.35;
   cursor: not-allowed;
+  box-shadow: none;
+}
+
+.stop-btn {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  animation: stop-pulse 2s ease-in-out infinite;
+}
+
+.stop-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+}
+
+@keyframes stop-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+// ── Recording indicator ──────────────────────────────
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  margin: 8px 0 0 0;
+  border-radius: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.recording-indicator .pulse-ring {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f87171;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.recording-indicator .pulse-ring::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(248, 113, 113, 0.5);
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+.voice-error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #f87171;
+  padding: 0 4px;
+}
+
+// ── Animations ───────────────────────────────────────
+@keyframes recording-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.12); opacity: 0.8; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
 }
 
 .sr-only {
@@ -90,20 +285,155 @@
   border: 0;
 }
 
-@media (max-width: 700px) {
+// ── Responsive ───────────────────────────────────────
+@media (max-width: 768px) {
   .task-bar {
-    gap: 10px;
+    gap: 8px;
+    padding: 8px 10px;
+    flex-direction: column;
+    border-radius: 12px;
+  }
+
+  .task-field {
+    width: 100%;
   }
 
   .url-input {
     min-width: 100%;
+    max-width: 100%;
+    flex: 1;
+    font-size: 13px;
+    padding: 8px 10px;
   }
 
-  .task-field.grow {
-    min-width: 100%;
+  .task-input {
+    font-size: 14px;
+    padding: 8px 10px;
+    min-height: 36px;
+  }
+
+  .form-input {
+    font-size: 13px;
+    padding: 10px 12px;
   }
 
   .submit-btn {
     width: 100%;
+    justify-content: center;
+    padding: 10px 16px;
+    font-size: 12px;
+    min-height: 44px;
+  }
+
+  .voice-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+    min-height: 44px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .voice-icon {
+    font-size: 14px;
+  }
+
+  .voice-text {
+    font-size: 12px;
+  }
+
+  .voice-input-container {
+    width: 100%;
+  }
+
+  .recording-indicator {
+    font-size: 11px;
+    padding: 6px 10px;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .task-bar {
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 10px;
+  }
+
+  .url-input {
+    font-size: 12px;
+    padding: 7px 8px;
+    border-radius: 6px;
+  }
+
+  .task-input {
+    min-height: 34px;
+    font-size: 13px;
+    padding: 7px 8px;
+  }
+
+  .form-input {
+    padding: 8px 8px;
+    font-size: 12px;
+  }
+
+  .submit-btn {
+    padding: 8px 14px;
+    font-size: 11px;
+    min-height: 40px;
+    border-radius: 8px;
+  }
+
+  .voice-btn {
+    padding: 7px 10px;
+    font-size: 11px;
+    min-height: 40px;
+  }
+
+  .voice-icon {
+    font-size: 13px;
+  }
+
+  .voice-text {
+    font-size: 11px;
+  }
+
+  .recording-indicator {
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+
+  .voice-error {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .task-bar {
+    gap: 5px;
+    padding: 5px 6px;
+    border-radius: 8px;
+  }
+
+  .url-input {
+    font-size: 11px;
+    padding: 6px 6px;
+  }
+
+  .task-input {
+    font-size: 12px;
+    padding: 6px 6px;
+    min-height: 32px;
+  }
+
+  .submit-btn {
+    font-size: 10px;
+    padding: 7px 12px;
+    min-height: 36px;
+  }
+
+  .voice-btn {
+    font-size: 10px;
+    padding: 6px 8px;
+    min-height: 36px;
   }
 }

@@ -1,0 +1,80 @@
+<div class="history-container">
+  <div class="history-header">
+    <h2>Task History</h2>
+    <p class="subtitle">Your saved automation tasks</p>
+  </div>
+
+  <div *ngIf="!isAuthenticated" class="not-authenticated">
+    <div class="empty-state">
+      <h3>📝 Sign in to Save History</h3>
+      <p>Keep track of your automation tasks by creating an account.</p>
+      <button class="btn btn-primary" (click)="openAuthModal()">
+        Sign In to Get Started
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="isAuthenticated && isLoading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading your task history...</p>
+  </div>
+
+  <div *ngIf="isAuthenticated && !isLoading && loadError" class="empty-state">
+    <h3>⚠️ Unable to Load History</h3>
+    <p>{{ loadError }}</p>
+    <button class="btn btn-primary" routerLink="/app">
+      Go to App
+    </button>
+  </div>
+
+  <div *ngIf="isAuthenticated && !isLoading && !loadError && tasks.length === 0" class="empty-state">
+    <h3>📭 No History Yet</h3>
+    <p>You haven't completed any tasks yet. Once you complete tasks, they'll be saved here automatically.</p>
+    <button class="btn btn-primary" routerLink="/app">
+      Go to App
+    </button>
+  </div>
+
+  <div *ngIf="isAuthenticated && !isLoading && tasks.length > 0" class="tasks-list">
+    <div *ngFor="let task of tasks" class="task-card" [class.failed]="task.status === 'failed'">
+      <div class="task-header">
+        <div class="task-status">
+          <span [class]="'status ' + task.status">
+            {{ getStatusIcon(task.status) }} {{ task.status }}
+          </span>
+          <span class="date">{{ formatDate(task.createdAt) }}</span>
+        </div>
+        <div class="task-actions">
+          <button class="btn-icon" (click)="viewDetails(task.taskId)" title="View Details">
+            👁️
+          </button>
+          <button class="btn-icon" (click)="deleteTask(task.taskId)" title="Delete">
+            🗑️
+          </button>
+        </div>
+      </div>
+
+      <div class="task-content">
+        <p class="description">{{ task.input.description }}</p>
+        <p class="url">{{ task.input.url }}</p>
+      </div>
+
+      <div class="task-stats">
+        <div class="stat">
+          <span class="label">Steps:</span>
+          <span class="value">{{ task.execution?.totalSteps || 0 }}</span>
+        </div>
+        <div class="stat">
+          <span class="label">Duration:</span>
+          <span class="value">{{ formatDuration(task.execution?.duration) }}</span>
+        </div>
+        <div class="stat">
+          <span class="label">Cost:</span>
+          <span class="value">${{ task.metadata ? task.metadata.costUSD.toFixed(3) : '0.000' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-auth-modal #authModal (closed)="onAuthClosed()"></app-auth-modal>

@@ -22,16 +22,26 @@ class BrowserPool {
       console.log('[BrowserPool] Initializing shared browser...');
 
       this.browser = await chromium.launch({
-        headless: true,
+        headless: false,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
+          '--disable-blink-features=AutomationControlled',
         ],
       });
 
-      this.page = await this.browser.newPage();
-      await this.page.setViewportSize({ width: 1280, height: 720 });
+      const context = await this.browser.newContext({
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        viewport: { width: 1280, height: 720 },
+      });
+
+      this.page = await context.newPage();
+
+      // Remove the webdriver flag that marks automated browsers
+      await this.page.addInitScript(() => {
+        Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      });
       this.initialized = true;
       console.log('[BrowserPool] ✅ Browser initialized');
     } catch (error) {

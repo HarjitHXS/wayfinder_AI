@@ -3,19 +3,32 @@
 /* CSS Custom Properties for Theming */
 :root {
   /* Default Dark Theme */
-  --bg-primary: #000000;
-  --bg-secondary: #1a1a1a;
-  --bg-tertiary: #2d2d2d;
-  --text-primary: #ffffff;
-  --text-secondary: #e0e0e0;
-  --text-muted: #a0a0a0;
-  --border-color: #333333;
-  --border-light: #404040;
-  --shadow: rgba(255, 255, 255, 0.1);
-  --hover-bg: #1a1a1a;
-  
+  --bg-primary: #07080d;
+  --bg-secondary: #111318;
+  --bg-tertiary: #1c1e26;
+  --text-primary: #f0f2ff;
+  --text-secondary: #c8ccdd;
+  --text-muted: #6b7194;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.05);
+  --shadow: rgba(0, 0, 0, 0.6);
+  --hover-bg: rgba(255, 255, 255, 0.04);
+
+  /* Accent */
+  --accent: #22d3ee;
+  --accent-dim: rgba(34, 211, 238, 0.15);
+  --accent-glow: rgba(34, 211, 238, 0.35);
+
+  /* Glass */
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg-hover: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-hover: rgba(255, 255, 255, 0.18);
+  --glass-blur: blur(16px);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+
   /* Transition for smooth theme changes */
-  --transition: all 0.2s ease;
+  --transition: all 0.22s ease;
 }
 
 /* Global Styles */
@@ -28,11 +41,24 @@
 html, body {
   height: 100%;
   font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-primary);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(34, 211, 238, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 60%);
+  background-attachment: fixed;
   color: var(--text-primary);
-  transition: var(--transition);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.light-theme body,
+.light-theme html {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(34, 211, 238, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 60%);
 }
 
 app-root {
@@ -42,29 +68,39 @@ app-root {
 
 /* Theme Classes */
 .light-theme {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8f9fa;
-  --bg-tertiary: #e9ecef;
-  --text-primary: #000000;
-  --text-secondary: #333333;
-  --text-muted: #666666;
-  --border-color: #dee2e6;
-  --border-light: #e9ecef;
-  --shadow: rgba(0, 0, 0, 0.1);
-  --hover-bg: #f8f9fa;
+  --bg-primary: #f0f4f8;
+  --bg-secondary: #e4eaf2;
+  --bg-tertiary: #d5dee9;
+  --text-primary: #0d1117;
+  --text-secondary: #2d3748;
+  --text-muted: #718096;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --border-light: rgba(0, 0, 0, 0.06);
+  --shadow: rgba(0, 0, 0, 0.12);
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-bg-hover: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-border-hover: rgba(0, 0, 0, 0.18);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255,255,255,0.8);
 }
 
 .dark-theme {
-  --bg-primary: #000000;
-  --bg-secondary: #1a1a1a;
-  --bg-tertiary: #2d2d2d;
-  --text-primary: #ffffff;
-  --text-secondary: #e0e0e0;
-  --text-muted: #a0a0a0;
-  --border-color: #333333;
-  --border-light: #404040;
-  --shadow: rgba(255, 255, 255, 0.1);
-  --hover-bg: #1a1a1a;
+  --bg-primary: #07080d;
+  --bg-secondary: #111318;
+  --bg-tertiary: #1c1e26;
+  --text-primary: #f0f2ff;
+  --text-secondary: #c8ccdd;
+  --text-muted: #6b7194;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.05);
+  --shadow: rgba(0, 0, 0, 0.6);
+  --hover-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg-hover: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-hover: rgba(255, 255, 255, 0.18);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
 /* Scrollbar Styling */
@@ -88,6 +124,14 @@ app-root {
 }
 
 /* Common Component Styles */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
 .card {
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -171,4 +215,33 @@ app-root {
 
 .border-light {
   border: 1px solid var(--border-light);
+}
+
+/* ── Global Responsive ─────────────────────────────── */
+@media (max-width: 768px) {
+  html, body {
+    font-size: 14px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+@media (max-width: 600px) {
+  html, body {
+    font-size: 13px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+}
+
+@media (max-width: 380px) {
+  html, body {
+    font-size: 12px;
+  }
 }

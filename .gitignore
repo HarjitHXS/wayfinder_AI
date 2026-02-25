@@ -1,1 +1,33 @@
 node_modules
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Angular/Nx caches and build output
+.angular/cache/
+.angular/
+.nx/
+dist/
+coverage/
+tmp/
+
+# Logs
+*.log
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+.gcp-key.json
+**/.env
+**/.env.*
+
+# Lock files (regeneratable)
+package-lock.json
+yarn.lock
+*.json
+!firebase.config.json

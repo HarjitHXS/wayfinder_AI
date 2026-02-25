@@ -1,9 +1,12 @@
 import { NgModule } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { HttpClientModule } from '@angular/common/http';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
-
+import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
+import { provideAuth, getAuth } from '@angular/fire/auth';
+import { firebaseConfig } from '../environments/firebase.config';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { TaskFormComponent } from './components/task-form/task-form.component';
@@ -14,7 +17,8 @@ import { LandingPageComponent } from './components/landing-page/landing-page.com
 import { AgentIdleStateComponent } from './components/agent-idle-state/agent-idle-state.component';
 import { AgentLoadingStateComponent } from './components/agent-loading-state/agent-loading-state.component';
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
-import { SuggestionsPanelComponent } from './components/suggestions-panel/suggestions-panel.component';
+import { AuthModalComponent } from './components/auth-modal/auth-modal.component';
+import { TaskHistoryComponent } from './components/task-history/task-history.component';
 
 @NgModule({
   declarations: [
@@ -27,16 +31,22 @@ import { SuggestionsPanelComponent } from './components/suggestions-panel/sugges
     AgentIdleStateComponent,
     AgentLoadingStateComponent,
     ThemeToggleComponent,
-    SuggestionsPanelComponent
+    AuthModalComponent,
+    TaskHistoryComponent
   ],
   imports: [
     BrowserModule,
+    CommonModule,
     BrowserAnimationsModule,
+    HttpClientModule,
     ReactiveFormsModule,
     FormsModule,
     AppRoutingModule
   ],
-  providers: [],
+  providers: [
+    provideFirebaseApp(() => initializeApp(firebaseConfig)),
+    provideAuth(() => getAuth())
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

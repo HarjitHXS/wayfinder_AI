@@ -13,17 +13,56 @@
 
     <div class="task-field grow">
       <label for="taskDescription" class="sr-only">Task Description</label>
-      <textarea
-        id="taskDescription"
-        formControlName="taskDescription"
-        placeholder="Type your task here..."
-        rows="2"
-        class="form-input task-input"
-      ></textarea>
+      <div class="voice-input-container">
+        <textarea
+          id="taskDescription"
+          formControlName="taskDescription"
+          placeholder="Type your task here..."
+          rows="2"
+          class="form-input task-input"
+        ></textarea>
+
+        <button
+          *ngIf="canUseVoice"
+          type="button"
+          class="voice-btn"
+          [class.recording]="isRecording"
+          (click)="toggleVoiceInput()"
+          [disabled]="loading || isTranscribing"
+          title="Use voice input"
+        >
+          <span *ngIf="!isRecording" class="voice-icon">🎤</span>
+          <span *ngIf="isRecording" class="voice-icon recording-pulse">⏺️</span>
+          <span class="voice-text">
+            {{ isTranscribing ? 'Transcribing...' : (isRecording ? 'Listening...' : 'Speak') }}
+          </span>
+        </button>
+      </div>
     </div>
 
-    <button type="submit" [disabled]="loading || !form.valid" class="submit-btn">
-      {{ loading ? 'Running...' : 'Send' }}
+    <button 
+      *ngIf="!loading"
+      type="submit" 
+      [disabled]="!form.valid" 
+      class="submit-btn send-btn">
+      SEND
     </button>
+
+    <button 
+      *ngIf="loading"
+      type="button"
+      (click)="stop()"
+      class="submit-btn stop-btn">
+      STOP
+    </button>
+  </div>
+
+  <div *ngIf="isRecording" class="recording-indicator">
+    <div class="pulse-ring"></div>
+    <span>Listening... speak your task</span>
+  </div>
+
+  <div *ngIf="voiceError" class="voice-error">
+    {{ voiceError }}
   </div>
 </form>

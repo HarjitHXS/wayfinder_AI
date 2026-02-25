@@ -1,29 +1,14 @@
 <div class="landing-page">
-  <div class="scroll-lights" aria-hidden="true">
-    <span class="light-orb orb-one"></span>
-    <span class="light-orb orb-two"></span>
-    <span class="light-orb orb-three"></span>
-    <span class="light-streak streak-one"></span>
-    <span class="light-streak streak-two"></span>
-  </div>
   <div class="landing-nav">
     <div class="nav-brand">Wayfinder AI</div>
-    <app-theme-toggle></app-theme-toggle>
+    <div class="nav-actions">
+      <app-theme-toggle></app-theme-toggle>
+    </div>
   </div>
   <!-- Hero Section -->
   <section class="hero">
-    <div class="hero-background">
-      <div class="floating-elements">
-        <div class="element" *ngFor="let i of [1,2,3,4,5,6]"></div>
-      </div>
-    </div>
-    
     <div class="container">
       <div class="hero-content">
-        <div class="hero-badge">
-          <span class="badge-text">Wayfinder AI ✨</span>
-        </div>
-        
         <h1 class="hero-title">
           <span class="brand-highlight">Wayfinder AI</span>
           <br>Visual UI Understanding & Interaction
@@ -40,12 +25,6 @@
             <span>Launch Wayfinder AI</span>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <button class="cta-secondary">
-            <span>View Overview</span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M8 5V19L19 12L8 5Z" fill="currentColor"/>
             </svg>
           </button>
         </div>
