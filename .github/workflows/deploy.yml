@@ -110,7 +110,6 @@ jobs:
             --timeout=60 \
             --concurrency=80 \
             --set-env-vars="NODE_ENV=production,BACKEND_URL=${BACKEND_URL}" \
-            --no-gen2 \
             --execution-environment=gen1
           
           FRONTEND_URL=$(gcloud run services describe wayfinder-frontend \
