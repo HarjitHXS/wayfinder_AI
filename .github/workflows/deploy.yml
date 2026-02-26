@@ -50,11 +50,16 @@ jobs:
         if: github.event.inputs.service == 'backend' || github.event.inputs.service == 'both'
         run: |
           TAG="${{ github.event.inputs.image_tag }}"
-          if [ "$TAG" == "latest" ]; then
-            TAG="${{ github.sha }}"
+          if [ -z "$TAG" ]; then
+            TAG="latest"
           fi
           
           IMAGE="${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/wayfinder/backend:${TAG}"
+          
+          # Get frontend URL for CORS
+          FRONTEND_URL=$(gcloud run services describe wayfinder-frontend \
+            --region=${{ env.GCP_REGION }} \
+            --format='value(status.url)' 2>/dev/null || echo "http://localhost:3000")
           
           gcloud run deploy wayfinder-backend \
             --image=${IMAGE} \
@@ -67,7 +72,7 @@ jobs:
             --memory=2Gi \
             --timeout=300 \
             --concurrency=80 \
-            --set-env-vars="NODE_ENV=production" \
+            --set-env-vars="NODE_ENV=production,FRONTEND_URL=${FRONTEND_URL}" \
             --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest,FIREBASE_ADMIN_KEY=FIREBASE_ADMIN_KEY:latest,SESSION_SECRET=SESSION_SECRET:latest,JWT_SECRET=JWT_SECRET:latest,ENCRYPTION_KEY=ENCRYPTION_KEY:latest" \
             --service-account=wayfinder-backend-sa@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
           
@@ -82,8 +87,8 @@ jobs:
         if: github.event.inputs.service == 'frontend' || github.event.inputs.service == 'both'
         run: |
           TAG="${{ github.event.inputs.image_tag }}"
-          if [ "$TAG" == "latest" ]; then
-            TAG="${{ github.sha }}"
+          if [ -z "$TAG" ]; then
+            TAG="latest"
           fi
           
           IMAGE="${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/wayfinder/frontend:${TAG}"
@@ -104,7 +109,9 @@ jobs:
             --memory=512Mi \
             --timeout=60 \
             --concurrency=80 \
-            --set-env-vars="NODE_ENV=production,BACKEND_URL=${BACKEND_URL}"
+            --set-env-vars="NODE_ENV=production,BACKEND_URL=${BACKEND_URL}" \
+            --no-gen2 \
+            --execution-environment=gen1
           
           FRONTEND_URL=$(gcloud run services describe wayfinder-frontend \
             --region=${{ env.GCP_REGION }} \

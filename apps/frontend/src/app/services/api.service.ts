@@ -53,11 +53,27 @@ export class ApiService {
    * Get API URL from environment or use default
    */
   private getApiUrl(): string {
-    // Check window object for runtime configuration
+    // 1. Check window object for runtime configuration (injected by Docker)
     if (typeof window !== 'undefined' && (window as any).__env__ && (window as any).__env__.API_URL) {
       return (window as any).__env__.API_URL;
     }
-    // Default to localhost in development, Cloud Run endpoint in production
+    
+    // 2. Check for config.json file (created at runtime in Cloud Run)
+    // This is handled by a Promise, but for sync method we'll use localStorage as fallback
+    const cachedUrl = typeof window !== 'undefined' ? localStorage.getItem('api-url') : null;
+    if (cachedUrl) {
+      return cachedUrl;
+    }
+    
+    // 3. Default to current origin's backend (Cloud Run service to service will use relative paths)
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+      // In production, backend and frontend are separate Cloud Run services
+      // Try to detect it from the hostname pattern
+      const backendUrl = window.location.origin.replace('frontend', 'backend');
+      return backendUrl;
+    }
+    
+    // 4. Development fallback
     return 'http://localhost:3001';
   }
 
