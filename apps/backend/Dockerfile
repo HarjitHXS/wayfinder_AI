@@ -6,8 +6,8 @@ RUN apk update && apk upgrade && apk add --no-cache dumb-init
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+COPY package.json yarn.lock ./
+RUN yarn install --production && yarn cache clean
 
 # Copy source
 COPY tsconfig.json ./
@@ -29,8 +29,8 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /app
 
 # Copy dependencies from builder
-COPY --chown=nodejs:nodejs package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+COPY --chown=nodejs:nodejs package.json yarn.lock ./
+RUN yarn install --production && yarn cache clean
 
 # Copy built application
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
