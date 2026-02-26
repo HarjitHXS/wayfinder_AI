@@ -1,8 +1,8 @@
 import { Injectable, NgZone } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import axios from 'axios';
-import { environment } from '../../environments/environment';
 import { FirebaseAuthService } from './firebase-auth.service';
+import { getRuntimeApiUrl } from '../utils/api-url';
 
 export interface Step {
   stepNumber: number;
@@ -40,7 +40,7 @@ export interface Task {
   providedIn: 'root'
 })
 export class AgentService {
-  private apiUrl = environment.apiUrl;
+  private apiUrl = getRuntimeApiUrl();
   private taskSubject = new BehaviorSubject<Task | null>(null);
   public task$ = this.taskSubject.asObservable();
 

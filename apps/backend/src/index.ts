@@ -2,6 +2,7 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import * as dotenv from 'dotenv';
+import { config } from './config';
 import * as agentController from './controllers/agentController';
 import * as voiceController from './controllers/voiceController';
 import * as authController from './controllers/authController';
@@ -25,7 +26,6 @@ dotenv.config();
 initializeFirebase();
 
 const app: Express = express();
-const port = process.env.BACKEND_PORT || process.env.PORT || 3001;
 
 // Trust proxy - important for rate limiting and IP detection
 app.set('trust proxy', 1);
@@ -56,16 +56,12 @@ app.use(helmet({
 }));
 
 // CORS with strict settings
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:3000')
-  .split(',')
-  .map(origin => origin.trim());
-
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin)) {
+    if (config.allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -74,7 +70,7 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  maxAge: 86400, // 24 hours
+  maxAge: config.security.corsMaxAgeSeconds,
 }));
 
 // Request size limits
@@ -84,8 +80,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Security logging
 app.use(securityLogger);
 
-// General request timeout (5 minutes)
-app.use(requestTimeout(300000));
+// General request timeout
+app.use(requestTimeout(config.security.requestTimeoutMs));
 
 // Optional authentication middleware - adds user to request if token is valid
 app.use(optionalAuth);
@@ -96,7 +92,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // Authentication Routes (optional Firebase) - stricter rate limiting
-const authRateLimit = rateLimit({ windowMs: 15 * 60 * 1000, maxRequests: 5, message: 'Too many authentication attempts' });
+const authRateLimit = rateLimit({ windowMs: config.rateLimits.auth.windowMs, maxRequests: config.rateLimits.auth.maxRequests, message: 'Too many authentication attempts' });
 
 app.get('/api/auth/verify', authController.verifyAuth);
 app.post('/api/auth/signup', authRateLimit, authController.signup);
@@ -107,7 +103,7 @@ app.put('/api/auth/profile', authController.updateUserProfile);
 app.get('/api/auth/subscription', authController.getSubscription);
 
 // Agent Routes - moderate rate limiting
-const agentRateLimit = rateLimit({ windowMs: 60 * 1000, maxRequests: 10, message: 'Too many requests' });
+const agentRateLimit = rateLimit({ windowMs: config.rateLimits.agent.windowMs, maxRequests: config.rateLimits.agent.maxRequests, message: 'Too many requests' });
 
 app.post('/api/agent/execute', agentRateLimit, validateTaskInput, agentController.executeTask);
 app.post('/api/agent/continue/:sessionId', agentRateLimit, validateContinueInput, agentController.continueTask);
@@ -120,7 +116,7 @@ app.delete('/api/agent/history/:taskId', historyManager.deleteTask);
 app.get('/api/stats', historyManager.getStats);
 
 // Voice API Routes - rate limiting for voice
-const voiceRateLimit = rateLimit({ windowMs: 60 * 1000, maxRequests: 20, message: 'Too many voice requests' });
+const voiceRateLimit = rateLimit({ windowMs: config.rateLimits.voice.windowMs, maxRequests: config.rateLimits.voice.maxRequests, message: 'Too many voice requests' });
 
 app.post('/api/voice/transcribe', voiceRateLimit, validateVoiceInput, voiceController.transcribeAudio);
 app.post('/api/voice/synthesize', voiceRateLimit, validateVoiceInput, voiceController.synthesizeSpeech);
@@ -177,9 +173,9 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`🚀 Wayfinder AI Backend running on port ${port}`);
-  console.log(`📊 Dashboard: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-  console.log(`🔐 Firebase Auth: ${process.env.FIREBASE_SERVICE_ACCOUNT ? '✅ Enabled' : '⚪ Disabled'}`);
-  console.log(`💾 Task History: ${process.env.FIREBASE_SERVICE_ACCOUNT ? '✅ Available for signed-in users' : '⚪ Disabled'}`);
+app.listen(config.port, () => {
+  console.log(`🚀 Wayfinder AI Backend running on port ${config.port}`);
+  console.log(`📊 Dashboard: ${config.frontendUrl}`);
+  console.log(`🔐 Firebase Auth: ${config.firebase.enabled ? '✅ Enabled' : '⚪ Disabled'}`);
+  console.log(`💾 Task History: ${config.firebase.enabled ? '✅ Available for signed-in users' : '⚪ Disabled'}`);
 });

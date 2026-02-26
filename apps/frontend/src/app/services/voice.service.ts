@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import axios from 'axios';
-import { environment } from '../../environments/environment';
+import { getRuntimeApiUrl } from '../utils/api-url';
 
 @Injectable({
   providedIn: 'root'
 })
 export class VoiceService {
-  private apiUrl = environment.apiUrl;
+  private apiUrl = getRuntimeApiUrl();
   private recorder: MediaRecorder | null = null;
   private chunks: BlobPart[] = [];
   private stream: MediaStream | null = null;
