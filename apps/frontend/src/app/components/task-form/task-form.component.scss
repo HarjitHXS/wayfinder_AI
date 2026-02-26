@@ -199,6 +199,25 @@
   box-shadow: none;
 }
 
+.continue-btn {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.continue-btn:hover:not(:disabled) {
+  border-color: var(--accent-glow);
+  color: var(--accent);
+  box-shadow: 0 0 16px var(--accent-dim);
+  transform: translateY(-1px);
+}
+
+.continue-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 .stop-btn {
   background: rgba(239, 68, 68, 0.12);
   color: #f87171;

@@ -88,6 +88,37 @@ export class AgentService {
     }
   }
 
+  async continueTask(
+    sessionId: string,
+    instruction: string,
+    inputs?: { email?: string; password?: string }
+  ): Promise<string> {
+    try {
+      this.loadingSubject.next(true);
+
+      const token = await this.authService.getIdToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await axios.post(
+        `${this.apiUrl}/api/agent/continue/${sessionId}`,
+        { instruction, inputs },
+        { headers }
+      );
+
+      const task = response.data.task;
+      this.currentSessionId = response.data.sessionId || sessionId;
+      this.taskSubject.next(task);
+
+      return this.currentSessionId || sessionId;
+    } catch (error) {
+      this.loadingSubject.next(false);
+      throw new Error('Failed to continue task. Please sign in and try again.');
+    }
+  }
+
   /**
    * Primary: Stream task updates via Server-Sent Events.
    * Falls back to polling if SSE connection fails.

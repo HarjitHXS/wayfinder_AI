@@ -28,6 +28,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   feedbackComment = '';
   feedbackSubmitted = false;
 
+  showContinueModal = false;
+  continueEmail = '';
+  continuePassword = '';
+  continueInstruction = '';
+  continueSubmitting = false;
+
   userStats: UserStats = { totalUsers: 0, totalLogins: 0 };
   feedbackSummary: FeedbackSummary = { averageRating: 0, totalRatings: 0 };
 
@@ -95,9 +101,10 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.historyError = null;
     try {
       this.historyTasks = await this.apiService.getTaskHistory();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading history:', error);
-      this.historyError = 'Failed to load task history';
+      const message = error?.response?.data?.message || 'Failed to load task history';
+      this.historyError = message;
       this.historyTasks = [];
     } finally {
       this.historyLoading = false;
@@ -156,6 +163,28 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
+  async onTaskContinue(event: { taskDescription: string }): Promise<void> {
+    if (!this.isAuthenticated) {
+      this.openAuthModal();
+      return;
+    }
+
+    if (!this.sessionId) {
+      return;
+    }
+
+    const instruction = event.taskDescription.trim();
+    if (!instruction) return;
+
+    if (this.requiresCredentials(instruction)) {
+      this.continueInstruction = instruction;
+      this.showContinueModal = true;
+      return;
+    }
+
+    await this.executeContinue(instruction);
+  }
+
 
 
   async submitUsername(): Promise<void> {
@@ -188,6 +217,28 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
+  cancelContinueModal(): void {
+    this.showContinueModal = false;
+    this.continueEmail = '';
+    this.continuePassword = '';
+    this.continueInstruction = '';
+    this.continueSubmitting = false;
+  }
+
+  async confirmContinueWithCredentials(): Promise<void> {
+    if (!this.sessionId || !this.continueInstruction) return;
+
+    const inputs = {
+      email: this.continueEmail.trim(),
+      password: this.continuePassword,
+    };
+
+    if (!inputs.email || !inputs.password) return;
+
+    await this.executeContinue(this.continueInstruction, inputs);
+    this.cancelContinueModal();
+  }
+
   skipFeedback(): void {
     this.showFeedbackModal = false;
   }
@@ -210,6 +261,38 @@ export class HomeComponent implements OnInit, OnDestroy {
   private async loginUser(): Promise<void> {
     if (!this.userName) return;
     await this.userService.login(this.userName);
+  }
+
+  get canContinue(): boolean {
+    return this.isAuthenticated && !!this.sessionId;
+  }
+
+  get preferContinue(): boolean {
+    return this.canContinue && (this.lastTaskStatus === 'completed' || this.lastTaskStatus === 'failed');
+  }
+
+  private requiresCredentials(instruction: string): boolean {
+    return /email|password/i.test(instruction);
+  }
+
+  private async executeContinue(
+    instruction: string,
+    inputs?: { email?: string; password?: string }
+  ): Promise<void> {
+    if (!this.sessionId) return;
+
+    this.continueSubmitting = true;
+
+    try {
+      const sessionId = await this.agentService.continueTask(this.sessionId, instruction, inputs);
+      this.sessionId = sessionId;
+      this.agentService.pollTaskStatus(sessionId);
+    } catch (error) {
+      console.error('Error continuing task:', error);
+      alert('Failed to continue task. Please sign in and try again.');
+    } finally {
+      this.continueSubmitting = false;
+    }
   }
 
   private async loadStats(): Promise<void> {
@@ -257,6 +340,8 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.clearTrialTimer();
       // After signing out, restart the trial timer
       this.startTrialTimer();
+      this.sessionId = null;
+      this.lastTaskStatus = null;
     } catch (error) {
       console.error('Error signing out:', error);
       alert('Failed to sign out. Please try again.');

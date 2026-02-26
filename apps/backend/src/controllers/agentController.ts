@@ -6,12 +6,34 @@ import browserPool from '../utils/browserPool';
 import { randomUUID } from 'crypto';
 import { AuthRequest } from '../middleware/auth';
 import { saveTask } from '../utils/historyManager';
+import { isFirebaseEnabled } from '../firebase/admin';
 
 interface ExecuteRequest {
   taskDescription: string;
   startUrl: string;
   uid?: string;
 }
+
+interface ContinueRequest {
+  instruction: string;
+  inputs?: {
+    email?: string;
+    password?: string;
+  };
+}
+
+interface ContinueQueueRequest {
+  instruction: string;
+  inputs?: {
+    email?: string;
+    password?: string;
+  };
+  uid: string;
+}
+
+type AgentQueuePayload =
+  | { kind: 'execute'; data: ExecuteRequest }
+  | { kind: 'continue'; data: ContinueQueueRequest };
 
 // Initialize browser pool on startup
 let browserInitialized = false;
@@ -28,27 +50,52 @@ async function initializeBrowserPool() {
 }
 
 // Create queue with processor
-const queue = new TaskQueue<ExecuteRequest>(async (item: QueueItem<ExecuteRequest>) => {
+const queue = new TaskQueue<AgentQueuePayload>(async (item: QueueItem<AgentQueuePayload>) => {
   try {
     console.log(`[Queue] Processing task ${item.id}`);
 
     const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'autosteer';
     const manager = new AgentManager(projectId);
 
-    const task = await manager.executeTask(item.data.taskDescription, item.data.startUrl, item.id);
-    sessionManager.updateSession(item.id, task);
+    if (item.data.kind === 'execute') {
+      const task = await manager.executeTask(item.data.data.taskDescription, item.data.data.startUrl, item.id);
+      sessionManager.updateSession(item.id, task);
 
-    // Persist to Firestore if user was authenticated
-    if (item.data.uid) {
-      await saveTask(item.data.uid, task);
+      // Persist to Firestore if user was authenticated
+      if (item.data.data.uid) {
+        await saveTask(item.data.data.uid, task);
+      }
+    } else {
+      const existingTask = sessionManager.getSession(item.id);
+      if (!existingTask) {
+        throw new Error('Session not found for continue');
+      }
+
+      const task = await manager.continueTask(
+        existingTask,
+        item.data.data.instruction,
+        item.id,
+        item.data.data.inputs
+      );
+      sessionManager.updateSession(item.id, task);
+
+      if (item.data.data.uid) {
+        await saveTask(item.data.data.uid, task);
+      }
     }
 
     console.log(`[Queue] ✅ Completed task ${item.id}`);
   } catch (error) {
     console.error(`[Queue] ❌ Failed task ${item.id}:`, error);
+    const taskDescription = item.data.kind === 'execute'
+      ? item.data.data.taskDescription
+      : item.data.data.instruction;
+    const uid = item.data.kind === 'execute'
+      ? item.data.data.uid
+      : item.data.data.uid;
     const errorTask = {
       id: item.id,
-      taskDescription: item.data.taskDescription,
+      taskDescription,
       status: 'failed' as const,
       steps: [],
       currentScreenshot: '',
@@ -59,8 +106,8 @@ const queue = new TaskQueue<ExecuteRequest>(async (item: QueueItem<ExecuteReques
     sessionManager.updateSession(item.id, errorTask);
 
     // Persist failed tasks too for history
-    if (item.data.uid) {
-      await saveTask(item.data.uid, errorTask);
+    if (uid) {
+      await saveTask(uid, errorTask);
     }
   }
 });
@@ -88,8 +135,8 @@ export async function executeTask(req: AuthRequest, res: Response) {
     };
 
     // Create session and queue task (include uid if authenticated)
-    sessionManager.createSession(sessionId, pendingTask);
-    queue.enqueue(sessionId, { taskDescription, startUrl, uid: req.user?.uid });
+    sessionManager.createSession(sessionId, pendingTask, req.user?.uid);
+    queue.enqueue(sessionId, { kind: 'execute', data: { taskDescription, startUrl, uid: req.user?.uid } });
 
     res.json({
       sessionId,
@@ -100,6 +147,60 @@ export async function executeTask(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error('[executeTask] Error:', error);
     res.status(500).json({ error: 'Failed to execute task', details: error instanceof Error ? error.message : String(error) });
+  }
+}
+
+export async function continueTask(req: AuthRequest, res: Response) {
+  try {
+    const { sessionId } = req.params;
+    const { instruction, inputs } = req.body as ContinueRequest;
+
+    if (!instruction) {
+      return res.status(400).json({ error: 'instruction is required' });
+    }
+
+    const firebaseEnabled = isFirebaseEnabled();
+    if (firebaseEnabled && !req.user?.uid) {
+      return res.status(401).json({ error: 'Unauthorized. Please sign in.' });
+    }
+
+    const entry = sessionManager.getSessionEntry(sessionId);
+    if (!entry) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    if (firebaseEnabled && (!entry.ownerUid || entry.ownerUid !== req.user?.uid)) {
+      return res.status(403).json({ error: 'Forbidden. Session does not belong to user.' });
+    }
+
+    if (entry.task.status === 'running' || entry.task.status === 'pending') {
+      return res.status(409).json({ error: 'Task is already running' });
+    }
+
+    await initializeBrowserPool();
+
+    const pendingTask = {
+      ...entry.task,
+      taskDescription: instruction,
+      status: 'pending' as const,
+      updatedAt: new Date(),
+    };
+
+    sessionManager.updateSession(sessionId, pendingTask);
+    queue.enqueue(sessionId, {
+      kind: 'continue',
+      data: { instruction, inputs, uid: req.user?.uid || '' }
+    });
+
+    res.json({
+      sessionId,
+      task: pendingTask,
+      message: 'Continue queued for execution',
+      queueLength: queue.getQueueLength(),
+    });
+  } catch (error) {
+    console.error('[continueTask] Error:', error);
+    res.status(500).json({ error: 'Failed to continue task', details: error instanceof Error ? error.message : String(error) });
   }
 }
 

@@ -1,0 +1,92 @@
+name: Build Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to build'
+        required: true
+        type: choice
+        options:
+          - backend
+          - frontend
+          - both
+
+env:
+  GCP_REGION: us-central1
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  ARTIFACT_REGISTRY: us-central1-docker.pkg.dev
+
+jobs:
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.ARTIFACT_REGISTRY }}
+
+      - name: Build and Push Backend
+        if: github.event.inputs.service == 'backend' || github.event.inputs.service == 'both'
+        run: |
+          IMAGE_TAG="${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/wayfinder/backend:${{ github.sha }}"
+          
+          cd apps/backend
+          docker build \
+            --build-arg NODE_ENV=production \
+            -t ${IMAGE_TAG} \
+            -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/wayfinder/backend:latest \
+            .
+          
+          docker push ${IMAGE_TAG}
+          docker push ${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/wayfinder/backend:latest
+          
+          echo "✅ Backend image built and pushed: ${IMAGE_TAG}"
+
+      - name: Build and Push Frontend
+        if: github.event.inputs.service == 'frontend' || github.event.inputs.service == 'both'
+        run: |
+          IMAGE_TAG="${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/wayfinder/frontend:${{ github.sha }}"
+          
+          # Get backend URL for build arg
+          BACKEND_URL=$(gcloud run services describe wayfinder-backend \
+            --region=${{ env.GCP_REGION }} \
+            --format='value(status.url)' 2>/dev/null || echo "http://localhost:3000")
+          
+          cd apps/frontend
+          docker build \
+            --build-arg NODE_ENV=production \
+            --build-arg BACKEND_URL=${BACKEND_URL} \
+            -t ${IMAGE_TAG} \
+            -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/wayfinder/frontend:latest \
+            .
+          
+          docker push ${IMAGE_TAG}
+          docker push ${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/wayfinder/frontend:latest
+          
+          echo "✅ Frontend image built and pushed: ${IMAGE_TAG}"
+
+      - name: Summary
+        run: |
+          echo "## Build Complete 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service(s):** ${{ github.event.inputs.service }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Images pushed to Artifact Registry" >> $GITHUB_STEP_SUMMARY

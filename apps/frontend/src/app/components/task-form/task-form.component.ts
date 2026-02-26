@@ -9,8 +9,13 @@ import { VoiceService } from '../../services/voice.service';
 })
 export class TaskFormComponent implements OnChanges {
   @Input() loading: boolean = false;
+  @Input() canContinue: boolean = false;
+  @Input() preferContinue: boolean = false;
   @Output() onSubmit = new EventEmitter<{ taskDescription: string; startUrl: string }>();
+  @Output() onContinue = new EventEmitter<{ taskDescription: string }>();
   @Output() onStop = new EventEmitter<void>();
+
+  private readonly autoSubmitDelayMs = 1200;
 
   form: FormGroup;
   isRecording = false;
@@ -41,6 +46,12 @@ export class TaskFormComponent implements OnChanges {
         startUrl: this.form.value.startUrl
       });
     }
+  }
+
+  continueTask(): void {
+    const taskDescription = (this.form.value.taskDescription || '').trim();
+    if (!taskDescription) return;
+    this.onContinue.emit({ taskDescription });
   }
 
   stop(): void {
@@ -81,6 +92,14 @@ export class TaskFormComponent implements OnChanges {
       this.form.patchValue({ taskDescription: nextValue });
       if (transcript) {
         await this.voiceService.speak('Got it.');
+        // Auto-submit the task after successful transcription
+        if (this.preferContinue && this.canContinue && this.isTaskDescriptionValid()) {
+          await this.delay(this.autoSubmitDelayMs);
+          this.continueTask();
+        } else if (this.form.valid) {
+          await this.delay(this.autoSubmitDelayMs);
+          this.submit();
+        }
       }
     } catch (error) {
       console.error('Failed to transcribe audio:', error);
@@ -89,5 +108,14 @@ export class TaskFormComponent implements OnChanges {
       this.isRecording = false;
       this.isTranscribing = false;
     }
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  isTaskDescriptionValid(): boolean {
+    const control = this.form.get('taskDescription');
+    return !!control && control.valid;
   }
 }

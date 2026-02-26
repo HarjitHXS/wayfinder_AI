@@ -15,27 +15,29 @@ export class BrowserController {
   }
 
   async addLabels(): Promise<void> {
-    const page = await browserPool.getPage();
-    await page.evaluate(LABEL_ELEMENTS_SCRIPT);
+    await this.withPageRetry(async (page) => {
+      await page.evaluate(LABEL_ELEMENTS_SCRIPT);
+    }, 'addLabels');
   }
 
   async removeLabels(): Promise<void> {
-    const page = await browserPool.getPage();
-    await page.evaluate(() => {
-        document.querySelectorAll('.wayfinder-label').forEach(el => el.remove());
-    });
+    await this.withPageRetry(async (page) => {
+      await page.evaluate(() => {
+          document.querySelectorAll('.wayfinder-label').forEach(el => el.remove());
+      });
+    }, 'removeLabels');
   }
 
   async screenshot(): Promise<Buffer> {
-    const page = await browserPool.getPage();
+    return await this.withPageRetry(async (page) => {
+      const screenshot = await page.screenshot({
+          type: 'jpeg',
+          quality: 70,  // Slightly lower for faster transfer + less tokens
+          scale: 'css'
+      });
 
-    const screenshot = await page.screenshot({
-        type: 'jpeg',
-        quality: 70,  // Slightly lower for faster transfer + less tokens
-        scale: 'css'
-    });
-
-    return Buffer.from(screenshot);
+      return Buffer.from(screenshot);
+    }, 'screenshot');
   }
 
   /**
@@ -59,10 +61,9 @@ export class BrowserController {
   }
 
   async executeAction(action: BrowserAction): Promise<string> {
-    const page = await browserPool.getPage();
-
     try {
-      switch (action.type) {
+      return await this.withPageRetry(async (page) => {
+        switch (action.type) {
         case 'click':
           if (!action.selector) throw new Error('Selector required for click action');
           // Verify element exists before clicking (3s timeout)
@@ -83,7 +84,7 @@ export class BrowserController {
 
         case 'scroll':
           const amount = action.amount || 500;
-          await page.evaluate((scrollAmount) => {
+          await page.evaluate((scrollAmount: number) => {
             window.scrollBy(0, scrollAmount);
           }, amount);
           return `Scrolled by ${amount}px`;
@@ -116,19 +117,49 @@ export class BrowserController {
 
         default:
           return 'Unknown action';
-      }
+        }
+      }, `executeAction:${action.type}`);
     } catch (error) {
       throw new Error(`Failed to execute action: ${error}`);
     }
   }
 
   async evaluateOnPage(script: string): Promise<any> {
-    const page = await browserPool.getPage();
-    return await page.evaluate(script);
+    return await this.withPageRetry(async (page) => {
+      return await page.evaluate(script);
+    }, 'evaluateOnPage');
   }
 
   async getPageContent(): Promise<string> {
-    const page = await browserPool.getPage();
-    return await page.content();
+    return await this.withPageRetry(async (page) => {
+      return await page.content();
+    }, 'getPageContent');
+  }
+
+  private async withPageRetry<T>(
+    action: (page: any) => Promise<T>,
+    label: string
+  ): Promise<T> {
+    try {
+      await browserPool.ensurePageReady();
+      const page = await browserPool.getPage();
+      return await action(page);
+    } catch (error: any) {
+      if (this.isPageClosedError(error)) {
+        console.log(`[BrowserController] Page closed during ${label}, reinitializing...`);
+        await browserPool.close();
+        await browserPool.initialize();
+        const page = await browserPool.getPage();
+        return await action(page);
+      }
+      throw error;
+    }
+  }
+
+  private isPageClosedError(error: any): boolean {
+    const message = String(error?.message || error || '');
+    return message.includes('Target page, context or browser has been closed')
+      || message.includes('has been closed')
+      || message.includes('browser has been closed');
   }
 }

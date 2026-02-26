@@ -13,6 +13,34 @@
     </div>
   </div>
 
+  <div *ngIf="showContinueModal" class="modal-backdrop" (click)="cancelContinueModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>Continue with Credentials</h2>
+      <p>Credentials are used once and never stored.</p>
+      <input
+        type="email"
+        [(ngModel)]="continueEmail"
+        placeholder="Email"
+        class="modal-input"
+      />
+      <input
+        type="password"
+        [(ngModel)]="continuePassword"
+        placeholder="Password"
+        class="modal-input"
+      />
+      <div class="modal-actions">
+        <button class="modal-secondary" (click)="cancelContinueModal()">Cancel</button>
+        <button
+          class="modal-primary"
+          [disabled]="!continueEmail || !continuePassword || continueSubmitting"
+          (click)="confirmContinueWithCredentials()">
+          {{ continueSubmitting ? 'Continuing...' : 'Continue' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
   <header class="app-header">
     <div class="header-content">
       <div class="brand">
@@ -66,7 +94,10 @@
           <div class="task-dock">
             <app-task-form 
               (onSubmit)="onTaskSubmit($event)" 
-              [loading]="!!(loading$ | async) || showTrialExpired">
+              (onContinue)="onTaskContinue($event)"
+              [loading]="!!(loading$ | async) || showTrialExpired"
+              [canContinue]="canContinue && !(loading$ | async)"
+              [preferContinue]="preferContinue && !(loading$ | async)">
             </app-task-form>
           </div>
         </section>

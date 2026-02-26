@@ -1,0 +1,156 @@
+name: Deploy to Cloud Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to deploy'
+        required: true
+        type: choice
+        options:
+          - backend
+          - frontend
+          - both
+      image_tag:
+        description: 'Image tag to deploy (leave empty for latest)'
+        required: false
+        type: string
+        default: 'latest'
+
+env:
+  GCP_REGION: us-central1
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  ARTIFACT_REGISTRY: us-central1-docker.pkg.dev
+  MIN_INSTANCES: 1
+  MAX_INSTANCES: 5
+
+jobs:
+  deploy:
+    name: Deploy Service
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy Backend
+        if: github.event.inputs.service == 'backend' || github.event.inputs.service == 'both'
+        run: |
+          TAG="${{ github.event.inputs.image_tag }}"
+          if [ "$TAG" == "latest" ]; then
+            TAG="${{ github.sha }}"
+          fi
+          
+          IMAGE="${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/wayfinder/backend:${TAG}"
+          
+          gcloud run deploy wayfinder-backend \
+            --image=${IMAGE} \
+            --region=${{ env.GCP_REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --min-instances=${{ env.MIN_INSTANCES }} \
+            --max-instances=${{ env.MAX_INSTANCES }} \
+            --cpu=2 \
+            --memory=2Gi \
+            --timeout=300 \
+            --concurrency=80 \
+            --set-env-vars="NODE_ENV=production" \
+            --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest,FIREBASE_ADMIN_KEY=FIREBASE_ADMIN_KEY:latest,SESSION_SECRET=SESSION_SECRET:latest,JWT_SECRET=JWT_SECRET:latest,ENCRYPTION_KEY=ENCRYPTION_KEY:latest" \
+            --service-account=wayfinder-backend-sa@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+          
+          BACKEND_URL=$(gcloud run services describe wayfinder-backend \
+            --region=${{ env.GCP_REGION }} \
+            --format='value(status.url)')
+          
+          echo "backend_url=${BACKEND_URL}" >> $GITHUB_OUTPUT
+          echo "✅ Backend deployed: ${BACKEND_URL}"
+
+      - name: Deploy Frontend
+        if: github.event.inputs.service == 'frontend' || github.event.inputs.service == 'both'
+        run: |
+          TAG="${{ github.event.inputs.image_tag }}"
+          if [ "$TAG" == "latest" ]; then
+            TAG="${{ github.sha }}"
+          fi
+          
+          IMAGE="${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/wayfinder/frontend:${TAG}"
+          
+          # Get backend URL
+          BACKEND_URL=$(gcloud run services describe wayfinder-backend \
+            --region=${{ env.GCP_REGION }} \
+            --format='value(status.url)')
+          
+          gcloud run deploy wayfinder-frontend \
+            --image=${IMAGE} \
+            --region=${{ env.GCP_REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --min-instances=${{ env.MIN_INSTANCES }} \
+            --max-instances=${{ env.MAX_INSTANCES }} \
+            --cpu=1 \
+            --memory=512Mi \
+            --timeout=60 \
+            --concurrency=80 \
+            --set-env-vars="NODE_ENV=production,BACKEND_URL=${BACKEND_URL}"
+          
+          FRONTEND_URL=$(gcloud run services describe wayfinder-frontend \
+            --region=${{ env.GCP_REGION }} \
+            --format='value(status.url)')
+          
+          echo "frontend_url=${FRONTEND_URL}" >> $GITHUB_OUTPUT
+          echo "✅ Frontend deployed: ${FRONTEND_URL}"
+
+      - name: Health Check
+        if: success()
+        run: |
+          if [ "${{ github.event.inputs.service }}" == "backend" ] || [ "${{ github.event.inputs.service }}" == "both" ]; then
+            BACKEND_URL=$(gcloud run services describe wayfinder-backend \
+              --region=${{ env.GCP_REGION }} \
+              --format='value(status.url)')
+            
+            echo "Testing backend health..."
+            for i in {1..5}; do
+              if curl -f "${BACKEND_URL}/health" > /dev/null 2>&1; then
+                echo "✅ Backend is healthy"
+                break
+              fi
+              echo "Attempt $i/5 failed, retrying in 10s..."
+              sleep 10
+            done
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service(s):** ${{ github.event.inputs.service }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** ${{ github.event.inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event.inputs.service }}" == "backend" ] || [ "${{ github.event.inputs.service }}" == "both" ]; then
+            BACKEND_URL=$(gcloud run services describe wayfinder-backend \
+              --region=${{ env.GCP_REGION }} \
+              --format='value(status.url)')
+            echo "**Backend:** ${BACKEND_URL}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ github.event.inputs.service }}" == "frontend" ] || [ "${{ github.event.inputs.service }}" == "both" ]; then
+            FRONTEND_URL=$(gcloud run services describe wayfinder-frontend \
+              --region=${{ env.GCP_REGION }} \
+              --format='value(status.url)')
+            echo "**Frontend:** ${FRONTEND_URL}" >> $GITHUB_STEP_SUMMARY
+          fi

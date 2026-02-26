@@ -99,7 +99,14 @@ export async function saveTask(
  * Get user's task history
  */
 export async function getTaskHistory(req: AuthRequest, res: Response) {
-  if (!isFirebaseEnabled() || !req.user) {
+  if (!isFirebaseEnabled()) {
+    return res.status(503).json({
+      error: 'Firebase not configured',
+      message: 'Task history is only available when Firebase is enabled. Set FIREBASE_SERVICE_ACCOUNT to enable.',
+    });
+  }
+
+  if (!req.user) {
     return res.status(401).json({
       error: 'Not authenticated',
       message: 'Please sign in to view your task history',
@@ -137,7 +144,14 @@ export async function getTaskHistory(req: AuthRequest, res: Response) {
  * Get specific task details
  */
 export async function getTaskDetail(req: AuthRequest, res: Response) {
-  if (!isFirebaseEnabled() || !req.user) {
+  if (!isFirebaseEnabled()) {
+    return res.status(503).json({
+      error: 'Firebase not configured',
+      message: 'Task history is only available when Firebase is enabled.',
+    });
+  }
+
+  if (!req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
@@ -173,7 +187,14 @@ export async function getTaskDetail(req: AuthRequest, res: Response) {
  * Delete a task from history
  */
 export async function deleteTask(req: AuthRequest, res: Response) {
-  if (!isFirebaseEnabled() || !req.user) {
+  if (!isFirebaseEnabled()) {
+    return res.status(503).json({
+      error: 'Firebase not configured',
+      message: 'Task history is only available when Firebase is enabled.',
+    });
+  }
+
+  if (!req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 

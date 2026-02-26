@@ -22,7 +22,7 @@ class BrowserPool {
       console.log('[BrowserPool] Initializing shared browser...');
 
       this.browser = await chromium.launch({
-        headless: false,
+        headless: true,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -51,8 +51,9 @@ class BrowserPool {
   }
 
   async getPage(): Promise<Page> {
-    if (!this.page || !this.browser) {
-      console.log('[BrowserPool] Browser disconnected or not initialized, reinitializing...');
+    if (!this.browser || !this.page || !this.browser.isConnected() || this.page.isClosed()) {
+      console.log('[BrowserPool] Browser disconnected or page closed, reinitializing...');
+      await this.close();
       await this.initialize();
     }
     if (!this.page) throw new Error('Browser not initialized. Call initialize() first');

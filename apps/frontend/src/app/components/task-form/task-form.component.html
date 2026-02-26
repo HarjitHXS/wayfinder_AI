@@ -48,6 +48,15 @@
       SEND
     </button>
 
+    <button
+      *ngIf="!loading && canContinue"
+      type="button"
+      [disabled]="!isTaskDescriptionValid() || isTranscribing"
+      class="submit-btn continue-btn"
+      (click)="continueTask()">
+      CONTINUE
+    </button>
+
     <button 
       *ngIf="loading"
       type="button"

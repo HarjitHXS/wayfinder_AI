@@ -3,10 +3,10 @@ import { SpeechClient } from '@google-cloud/speech';
 import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 
 const speechClient = new SpeechClient({
-  projectId: process.env.GOOGLE_CLOUD_PROJECT || 'wayfinder-ai'
+  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || 'autosteer'
 });
 const ttsClient = new TextToSpeechClient({
-  projectId: process.env.GOOGLE_CLOUD_PROJECT || 'wayfinder-ai'
+  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || 'autosteer'
 });
 
 interface TranscribeRequest {

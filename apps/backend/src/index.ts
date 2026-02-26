@@ -1,5 +1,6 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import * as dotenv from 'dotenv';
 import * as agentController from './controllers/agentController';
 import * as voiceController from './controllers/voiceController';
@@ -8,6 +9,15 @@ import * as historyManager from './utils/historyManager';
 import sessionManager from './utils/sessionManager';
 import { initializeFirebase } from './firebase/admin';
 import { optionalAuth, requireAuth } from './middleware/auth';
+import {
+  rateLimit,
+  validateTaskInput,
+  validateContinueInput,
+  validateVoiceInput,
+  sanitizeError,
+  requestTimeout,
+  securityLogger,
+} from './middleware/security';
 
 dotenv.config();
 
@@ -17,44 +27,103 @@ initializeFirebase();
 const app: Express = express();
 const port = process.env.BACKEND_PORT || process.env.PORT || 3001;
 
-// Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true,
+// Trust proxy - important for rate limiting and IP detection
+app.set('trust proxy', 1);
+
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+  noSniff: true,
+  xssFilter: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// CORS with strict settings
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:3000')
+  .split(',')
+  .map(origin => origin.trim());
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400, // 24 hours
+}));
+
+// Request size limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Security logging
+app.use(securityLogger);
+
+// General request timeout (5 minutes)
+app.use(requestTimeout(300000));
 
 // Optional authentication middleware - adds user to request if token is valid
 app.use(optionalAuth);
 
-// Health check
+// Health check - no rate limit
 app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Authentication Routes (optional Firebase)
-app.get('/api/auth/verify', authController.verifyAuth);
-app.post('/api/auth/signup', authController.signup);
-app.post('/api/auth/login', authController.login);
-app.post('/api/auth/logout', authController.logout);
-app.get('/api/auth/profile', requireAuth, authController.getUserProfile);
-app.put('/api/auth/profile', requireAuth, authController.updateUserProfile);
-app.get('/api/auth/subscription', requireAuth, authController.getSubscription);
+// Authentication Routes (optional Firebase) - stricter rate limiting
+const authRateLimit = rateLimit({ windowMs: 15 * 60 * 1000, maxRequests: 5, message: 'Too many authentication attempts' });
 
-// Agent Routes
-app.post('/api/agent/execute', agentController.executeTask);
+app.get('/api/auth/verify', authController.verifyAuth);
+app.post('/api/auth/signup', authRateLimit, authController.signup);
+app.post('/api/auth/login', authRateLimit, authController.login);
+app.post('/api/auth/logout', authController.logout);
+app.get('/api/auth/profile', authController.getUserProfile);
+app.put('/api/auth/profile', authController.updateUserProfile);
+app.get('/api/auth/subscription', authController.getSubscription);
+
+// Agent Routes - moderate rate limiting
+const agentRateLimit = rateLimit({ windowMs: 60 * 1000, maxRequests: 10, message: 'Too many requests' });
+
+app.post('/api/agent/execute', agentRateLimit, validateTaskInput, agentController.executeTask);
+app.post('/api/agent/continue/:sessionId', agentRateLimit, validateContinueInput, agentController.continueTask);
 app.get('/api/agent/status/:sessionId', agentController.getTaskStatus);
-app.post('/api/agent/analyze', agentController.analyzeWebsite);
+app.post('/api/agent/analyze', agentRateLimit, validateTaskInput, agentController.analyzeWebsite);
 app.post('/api/agent/cleanup/:sessionId', agentController.cleanupSession);
-app.get('/api/agent/history', requireAuth, historyManager.getTaskHistory);
-app.get('/api/agent/history/:taskId', requireAuth, historyManager.getTaskDetail);
-app.delete('/api/agent/history/:taskId', requireAuth, historyManager.deleteTask);
+app.get('/api/agent/history', historyManager.getTaskHistory);
+app.get('/api/agent/history/:taskId', historyManager.getTaskDetail);
+app.delete('/api/agent/history/:taskId', historyManager.deleteTask);
 app.get('/api/stats', historyManager.getStats);
 
-// Voice API Routes
-app.post('/api/voice/transcribe', voiceController.transcribeAudio);
-app.post('/api/voice/synthesize', voiceController.synthesizeSpeech);
+// Voice API Routes - rate limiting for voice
+const voiceRateLimit = rateLimit({ windowMs: 60 * 1000, maxRequests: 20, message: 'Too many voice requests' });
+
+app.post('/api/voice/transcribe', voiceRateLimit, validateVoiceInput, voiceController.transcribeAudio);
+app.post('/api/voice/synthesize', voiceRateLimit, validateVoiceInput, voiceController.synthesizeSpeech);
 
 // SSE streaming endpoint — pushes task updates in real-time
 app.get('/api/agent/stream/:sessionId', (req: Request, res: Response) => {
@@ -95,10 +164,17 @@ app.get('/api/agent/stream/:sessionId', (req: Request, res: Response) => {
   });
 });
 
-// Error handling middleware
+// Error handling middleware - sanitize errors to prevent information leakage
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error', message: err.message });
+  
+  // Don't expose internal error details
+  const safeMessage = sanitizeError(err);
+  const statusCode = (err as any).statusCode || 500;
+  
+  res.status(statusCode).json({
+    error: statusCode === 500 ? 'Internal server error' : safeMessage,
+  });
 });
 
 app.listen(port, () => {

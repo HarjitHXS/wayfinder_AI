@@ -84,32 +84,67 @@ export async function signup(req: Request, res: Response) {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+
+  // Validate password strength
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+  }
+
+  // Check for password complexity
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  
+  if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+    return res.status(400).json({
+      error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+    });
+  }
+
+  // Sanitize displayName
+  const sanitizedDisplayName = displayName ? displayName.substring(0, 100).replace(/[\x00-\x1F\x7F]/g, '') : 'User';
+
   try {
     const auth = getFirebaseAuth();
     
-    // Create Firebase user
+    // Create Firebase user - don't log password
+    console.log(`[Auth] Creating user account for email: ${email}`);
     const userRecord = await auth.createUser({
       email,
       password,
-      displayName: displayName || 'User',
+      displayName: sanitizedDisplayName,
     });
 
     // Create user document in Firestore
-    await createOrUpdateUser(userRecord.uid, email, displayName);
+    await createOrUpdateUser(userRecord.uid, email, sanitizedDisplayName);
 
+    console.log(`[Auth] User created successfully: ${userRecord.uid}`);
     return res.status(201).json({
       message: 'User created successfully',
       uid: userRecord.uid,
       email: userRecord.email,
     });
   } catch (error: any) {
-    console.error('[AuthController] Signup error:', error);
+    console.error('[AuthController] Signup error:', error.code || error.message);
 
     if (error.code === 'auth/email-already-exists') {
       return res.status(409).json({ error: 'Email already in use' });
     }
 
-    return res.status(500).json({ error: error.message || 'Failed to create user' });
+    if (error.code === 'auth/invalid-email') {
+      return res.status(400).json({ error: 'Invalid email address' });
+    }
+
+    if (error.code === 'auth/weak-password') {
+      return res.status(400).json({ error: 'Password is too weak' });
+    }
+
+    return res.status(500).json({ error: 'Failed to create user' });
   }
 }
 
