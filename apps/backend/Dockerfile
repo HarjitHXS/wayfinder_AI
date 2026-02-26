@@ -7,14 +7,14 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json yarn.lock ./
-RUN yarn install --production && yarn cache clean
+RUN yarn install && yarn cache clean
 
 # Copy source
 COPY tsconfig.json ./
 COPY src ./src
 
 # Build
-RUN npm run build
+RUN yarn build
 
 # Production stage
 FROM node:18-alpine
