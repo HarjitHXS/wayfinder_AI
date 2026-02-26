@@ -30,15 +30,15 @@ RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
     echo 'CONFIGEOF' >> /app/entrypoint.sh && \
     echo '' >> /app/entrypoint.sh && \
     echo '# Start http-server' >> /app/entrypoint.sh && \
-    echo 'exec http-server dist -p 3000 -c-1 --gzip' >> /app/entrypoint.sh && \
+    echo 'exec http-server dist -p 8080 -c-1 --gzip' >> /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh
 
-# Add a simple health check script
+ # Add a simple health check script
 RUN echo '#!/bin/sh' > /app/healthcheck.sh && \
-    echo 'curl -f http://localhost:3000/ > /dev/null 2>&1' >> /app/healthcheck.sh && \
-    chmod +x /app/healthcheck.sh
+  echo 'curl -f http://localhost:8080/ > /dev/null 2>&1' >> /app/healthcheck.sh && \
+  chmod +x /app/healthcheck.sh
 
-EXPOSE 3000
+EXPOSE 8080
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
   CMD /app/healthcheck.sh
