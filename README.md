@@ -134,22 +134,6 @@ npm run frontend
 
 **Access**: http://localhost:3000
 
-### Option 2: Docker Compose
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd wayfinder_AI
-
-# Build and start containers
-docker-compose up --build
-
-# Access
-# Frontend: http://localhost:3000
-# Backend: http://localhost:3001
-# Health check: http://localhost:3001/health
-```
-
 ---
 
 ## 📖 Usage
@@ -362,7 +346,6 @@ wayfinder_AI/                           # Root monorepo
 │   ├── DEPLOYMENT.md                   # Deployment guide
 │   └── guides/
 │
-├── docker-compose.yml                  # Docker orchestration
 ├── README.md                           # This file
 ├── ARCHITECTURE.md                     # Detailed architecture
 ├── package.json                        # Root workspace config

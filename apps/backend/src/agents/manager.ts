@@ -9,11 +9,13 @@ export class AgentManager {
   private geminiClient: GeminiClient | GeminiStudioClient;
   private task?: TaskExecution;
   private maxSteps: number = 10;
+  private singleModelRequestMode: boolean;
 
   constructor(projectId: string = process.env.GOOGLE_CLOUD_PROJECT_ID || 'autosteer', location?: string) {
     this.browserController = new BrowserController();
+    this.singleModelRequestMode = (process.env.SINGLE_MODEL_REQUEST_MODE ?? 'true').toLowerCase() !== 'false';
 
-    const apiKey = process.env.GOOGLE_AI_API_KEY;
+    const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
     if (apiKey) {
       console.log('[AgentManager] Using Google AI Studio');
       this.geminiClient = new GeminiStudioClient(apiKey);
@@ -60,6 +62,9 @@ export class AgentManager {
       }
 
       console.log(`[AgentManager] Plan: ${plan.decisions.length} actions — ${plan.summary}`);
+      if (this.singleModelRequestMode) {
+        console.log('[AgentManager] Single-model-request mode enabled: skipping re-plan/retry/verify API calls');
+      }
 
       // ── Execute with adaptive re-planning ─────────────
       const executedActions: string[] = [];
@@ -80,32 +85,7 @@ export class AgentManager {
         try {
           result = await this.browserController.executeAction(decision.action);
         } catch (error: any) {
-          console.log(`[AgentManager] Action failed: ${error.message}. Re-planning this step...`);
-
-          // Take fresh screenshot and ask Gemini for a corrected action
-          await this.browserController.smartWait(500);
-          await this.browserController.addLabels();
-          const retryScreenshot = await this.browserController.screenshot();
-          await this.browserController.removeLabels();
-
-          try {
-            const fix = await this.geminiClient.planTask(retryScreenshot,
-              `The action "${decision.action.type}" on "${decision.action.selector || ''}" failed (${error.message}). ` +
-              `Find the correct element to accomplish: ${decision.reasoning}. ` +
-              `Original task: "${taskDescription}". Return only the corrective action.`
-            );
-            apiCalls++;
-
-            if (fix.decisions?.[0]) {
-              result = await this.browserController.executeAction(fix.decisions[0].action);
-              console.log('[AgentManager] Retry succeeded');
-            } else {
-              // Could not recover — record failure and continue
-              result = `Failed: ${error.message}`;
-            }
-          } catch {
-            result = `Failed: ${error.message}`;
-          }
+          result = `Failed: ${error.message}`;
         }
 
         executedActions.push(`${decision.action.type} (${decision.reasoning})`);
@@ -144,7 +124,7 @@ export class AgentManager {
         const isPageChanging = ['click', 'navigate'].includes(decision.action.type);
         const hasRemainingSteps = i < plan.decisions.length - 1;
 
-        if (isPageChanging && hasRemainingSteps && apiCalls < 4) {
+        if (!this.singleModelRequestMode && isPageChanging && hasRemainingSteps && apiCalls < 4) {
           console.log('[AgentManager] Page may have changed — re-planning remaining steps');
 
           await this.browserController.addLabels();
@@ -174,10 +154,10 @@ export class AgentManager {
       // ── Verify (conditional) ──────────────────────────
       const allSucceeded = this.task.steps.every(s => !s.result.startsWith('Failed'));
 
-      if (allSucceeded && plan.decisions.length <= 5) {
+      if (this.singleModelRequestMode || (allSucceeded && plan.decisions.length <= 5)) {
         // Simple task, all steps passed — assume success
-        this.task.status = 'completed';
-        console.log('[AgentManager] All steps succeeded — skipping verification');
+        this.task.status = allSucceeded ? 'completed' : 'failed';
+        console.log('[AgentManager] Skipping verification API call');
       } else {
         // Complex or partially failed — verify with Gemini
         console.log('[AgentManager] Verifying task completion...');
@@ -267,6 +247,9 @@ export class AgentManager {
       }
 
       console.log(`[AgentManager] Continuation plan: ${plan.decisions.length} actions — ${plan.summary}`);
+      if (this.singleModelRequestMode) {
+        console.log('[AgentManager] Single-model-request mode enabled: skipping continuation re-plan/retry/verify API calls');
+      }
 
       let additionalSteps = 0;
       let apiCalls = 1;
@@ -292,36 +275,7 @@ export class AgentManager {
           usedSensitive = resolved.usedSensitive;
           result = await this.browserController.executeAction(actionForExecution);
         } catch (error: any) {
-          console.log(`[AgentManager] Action failed: ${error.message}. Re-planning this step...`);
-
-          await this.browserController.smartWait(500);
-          await this.browserController.addLabels();
-          const retryScreenshot = await this.browserController.screenshot();
-          await this.browserController.removeLabels();
-
-          try {
-            const fix = await this.geminiClient.planTask(
-              retryScreenshot,
-              `The action "${decision.action.type}" on "${decision.action.selector || ''}" failed (${error.message}). ` +
-              `Find the correct element to accomplish: ${decision.reasoning}. ` +
-              `${sensitiveHint}` +
-              `Original instruction: "${instruction}". Return only the corrective action.`
-            );
-            apiCalls++;
-
-            if (fix.decisions?.[0]) {
-              const resolved = this.resolveSensitiveAction(fix.decisions[0].action, inputs);
-              actionForExecution = resolved.resolvedAction;
-              actionForLog = resolved.loggedAction;
-              usedSensitive = resolved.usedSensitive;
-              result = await this.browserController.executeAction(actionForExecution);
-              console.log('[AgentManager] Retry succeeded');
-            } else {
-              result = `Failed: ${error.message}`;
-            }
-          } catch {
-            result = `Failed: ${error.message}`;
-          }
+          result = `Failed: ${error.message}`;
         }
 
         const safeResult = usedSensitive && actionForExecution.type === 'type'
@@ -360,7 +314,7 @@ export class AgentManager {
         const isPageChanging = ['click', 'navigate'].includes(actionForExecution.type);
         const hasRemainingSteps = i < plan.decisions.length - 1;
 
-        if (isPageChanging && hasRemainingSteps && apiCalls < 4) {
+        if (!this.singleModelRequestMode && isPageChanging && hasRemainingSteps && apiCalls < 4) {
           console.log('[AgentManager] Page may have changed — re-planning remaining steps');
 
           await this.browserController.addLabels();
@@ -390,9 +344,12 @@ export class AgentManager {
       const newSteps = this.task.steps.slice(initialStepCount);
       const allSucceeded = newSteps.length > 0 && newSteps.every(s => !s.result.startsWith('Failed'));
 
-      if (allSucceeded && plan.decisions.length <= 5) {
+      if (this.singleModelRequestMode || (allSucceeded && plan.decisions.length <= 5)) {
         this.task.status = 'completed';
-        console.log('[AgentManager] Continuation succeeded — skipping verification');
+        if (!allSucceeded) {
+          this.task.status = 'failed';
+        }
+        console.log('[AgentManager] Skipping continuation verification API call');
       } else {
         console.log('[AgentManager] Verifying continuation...');
         const finalScreenshot = await this.browserController.screenshot();

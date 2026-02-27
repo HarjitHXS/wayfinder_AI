@@ -217,7 +217,7 @@ graph TB
 - **Server-Sent Events**: Express native support
 
 ### Infrastructure
-- **Containerization**: Docker & Docker Compose
+- **Containerization**: Docker
 - **Cloud Platform**: Google Cloud (Cloud Run, Vertex AI)
 - **Frontend Hosting**: Firebase Hosting (optional)
 - **Code Repository**: GitHub

@@ -1,0 +1,21 @@
+# Cloud Build ignore file
+# NOTE: Without this file, gcloud uses .gitignore which excludes yarn.lock
+
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.*.local
+.gcp-key.json
+gcp-key.json
+*-key.json
+*credentials*.json
+.idea/
+.vscode/
+*.log
+coverage/
+tmp/
+temp/
+*.tsbuildinfo
+.DS_Store

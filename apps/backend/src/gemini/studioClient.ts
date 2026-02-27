@@ -11,6 +11,7 @@ export class GeminiStudioClient {
   private static lastRequestTime: number = 0;
   // 1 second between calls (60 RPM) — matches Vertex client
   private minRequestInterval: number = 1000;
+  private maxRetries: number;
   
   private systemPrompt: string = `You are Wayfinder AI, an intelligent web automation agent with exceptional visual understanding capabilities.
 
@@ -58,7 +59,9 @@ CRITICAL RULES:
     }
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+    this.maxRetries = Math.max(0, parseInt(process.env.GEMINI_MAX_RETRIES || '0', 10));
     console.log(`[GeminiStudioClient] Initialized with model: ${this.modelName}`);
+    console.log(`[GeminiStudioClient] Retry attempts per request: ${this.maxRetries}`);
   }
 
   private async throttleRequest(): Promise<void> {
@@ -76,7 +79,7 @@ CRITICAL RULES:
 
   private async retryWithBackoff<T>(
     fn: () => Promise<T>,
-    maxRetries: number = 3
+    maxRetries: number = this.maxRetries
   ): Promise<T> {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {

@@ -9,9 +9,9 @@ export class BrowserController {
     await browserPool.ensurePageReady();
     const page = await browserPool.getPage();
     // Use domcontentloaded for speed — networkidle stalls on heavy sites
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    // Best-effort wait for full load (non-blocking, 3s cap)
-    await page.waitForLoadState('load', { timeout: 3000 }).catch(() => {});
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    // Best-effort wait for full load (non-blocking, 5s cap)
+    await page.waitForLoadState('load', { timeout: 5000 }).catch(() => {});
   }
 
   async addLabels(): Promise<void> {
@@ -91,8 +91,8 @@ export class BrowserController {
 
         case 'navigate':
           if (!action.url) throw new Error('URL required for navigate action');
-          await page.goto(action.url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-          await page.waitForLoadState('load', { timeout: 3000 }).catch(() => {});
+          await page.goto(action.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await page.waitForLoadState('load', { timeout: 5000 }).catch(() => {});
           return `Navigated to ${action.url}`;
 
         case 'wait':

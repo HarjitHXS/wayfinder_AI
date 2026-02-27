@@ -50,21 +50,30 @@ WORKDIR /app
 COPY --chown=nodejs:nodejs package.json yarn.lock ./
 RUN yarn install --production && yarn cache clean
 
-# Install Playwright browsers
+# Pin Playwright browser install path so build + runtime agree
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright-browsers
+
+# Install Playwright browsers to the pinned path
 RUN npx playwright install --with-deps chromium
 
 # Copy built application
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 
+# Chromium needs a writable tmp directory for profiles/crashes (Cloud Run root fs is read-only)
+ENV TMPDIR=/tmp
+ENV XDG_CACHE_HOME=/tmp/.cache
+ENV XDG_CONFIG_HOME=/tmp/.config
+
+# Cloud Run injects PORT env var (usually 8080); fall back to 3001 for local
+ENV PORT=8080
+EXPOSE ${PORT}
+
 # Use non-root user
 USER nodejs
 
-# Expose port
-EXPOSE 3001
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+# Health check — reads the same PORT env var Cloud Run sets
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD node -e "const p=process.env.PORT||8080;require('http').get('http://localhost:'+p+'/health',(r)=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]

@@ -173,9 +173,18 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-app.listen(config.port, () => {
+app.listen(config.port, async () => {
   console.log(`🚀 Wayfinder AI Backend running on port ${config.port}`);
   console.log(`📊 Dashboard: ${config.frontendUrl}`);
   console.log(`🔐 Firebase Auth: ${config.firebase.enabled ? '✅ Enabled' : '⚪ Disabled'}`);
   console.log(`💾 Task History: ${config.firebase.enabled ? '✅ Available for signed-in users' : '⚪ Disabled'}`);
+
+  // Pre-warm the browser so the first request doesn't have to wait for Chromium
+  try {
+    const browserPool = (await import('./utils/browserPool')).default;
+    await browserPool.initialize();
+    console.log('🌐 Browser pre-warmed and ready');
+  } catch (err) {
+    console.warn('⚠️  Browser pre-warm failed (will retry on first request):', err instanceof Error ? err.message : err);
+  }
 });

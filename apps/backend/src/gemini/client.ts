@@ -6,6 +6,7 @@ import * as path from 'path';
 export class GeminiClient {
   private vertexAI: VertexAI;
   private modelName: string;
+  private maxRetries: number;
   // Make throttle state static to share across all instances
   private static lastRequestTime: number = 0;
   // With billing enabled, we have paid tier quotas (60+ RPM)
@@ -107,6 +108,8 @@ CRITICAL RULES:
     });
 
     this.modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+    this.maxRetries = Math.max(0, parseInt(process.env.GEMINI_MAX_RETRIES || '0', 10));
+    console.log(`[GeminiClient] Retry attempts per request: ${this.maxRetries}`);
   }
 
   private async throttleRequest(): Promise<void> {
@@ -125,7 +128,7 @@ CRITICAL RULES:
 
   private async retryWithBackoff<T>(
     fn: () => Promise<T>,
-    maxRetries: number = 5 // Increased from 2 to 5
+    maxRetries: number = this.maxRetries
   ): Promise<T> {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
