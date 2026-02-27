@@ -1,12 +1,11 @@
 import { BrowserController } from '../browser/controller';
 import { GeminiClient } from '../gemini/client';
-import { GeminiStudioClient } from '../gemini/studioClient';
 import { TaskExecution, ExecutionStep, BrowserAction } from '../types/index';
 import sessionManager from '../utils/sessionManager';
 
 export class AgentManager {
   private browserController: BrowserController;
-  private geminiClient: GeminiClient | GeminiStudioClient;
+  private geminiClient: GeminiClient;
   private task?: TaskExecution;
   private maxSteps: number = 10;
   private singleModelRequestMode: boolean;
@@ -15,14 +14,8 @@ export class AgentManager {
     this.browserController = new BrowserController();
     this.singleModelRequestMode = (process.env.SINGLE_MODEL_REQUEST_MODE ?? 'true').toLowerCase() !== 'false';
 
-    const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
-    if (apiKey) {
-      console.log('[AgentManager] Using Google AI Studio');
-      this.geminiClient = new GeminiStudioClient(apiKey);
-    } else {
-      console.log('[AgentManager] Using Vertex AI');
-      this.geminiClient = new GeminiClient(projectId, location);
-    }
+    console.log('[AgentManager] Using Vertex AI');
+    this.geminiClient = new GeminiClient(projectId, location);
   }
 
   async executeTask(taskDescription: string, startUrl: string, taskId: string): Promise<TaskExecution> {

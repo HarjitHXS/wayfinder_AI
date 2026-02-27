@@ -53,11 +53,12 @@ CRITICAL RULES:
 ✓ NO markdown code blocks - pure JSON only`;
 
   constructor(projectId: string, location: string = 'us-central1') {
-    // Load credentials from file explicitly
-    // Try multiple path strategies:
-    // 1. Environment variable (if explicitly set)
-    // 2. From __dirname (compiled location is dist/gemini, so go up 2 levels)
-    // 3. From process.cwd() (workspace root)
+    // Support both local development (with .gcp-key.json file) and Cloud Run (automatic credentials)
+    let resolvedProjectId = projectId;
+    let credentialsPath: string | null = null;
+
+    // Try to find credentials file for local development
+    // In Cloud Run, these paths won't exist, so we'll skip to automatic auth
     const possiblePaths: string[] = [];
     
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS && fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
@@ -79,37 +80,36 @@ CRITICAL RULES:
       possiblePaths.push(cwdPath);
     }
 
-    if (possiblePaths.length === 0) {
-      const debugPaths = [
-        process.env.GOOGLE_APPLICATION_CREDENTIALS || '(not set)',
-        dirnamePath,
-        cwdBackendPath,
-        cwdPath,
-      ];
-      throw new Error(
-        `GCP credentials file not found. Tried:\n${debugPaths.map(p => `  - ${p}`).join('\n')}\n` +
-        `Current working directory: ${process.cwd()}\n` +
-        `__dirname: ${__dirname}`
-      );
+    // If credentials file found, use it and extract project ID
+    if (possiblePaths.length > 0) {
+      credentialsPath = possiblePaths[0];
+      console.log(`[GeminiClient] Loading credentials from file: ${credentialsPath}`);
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
+      
+      try {
+        const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf-8'));
+        resolvedProjectId = credentials.project_id || projectId;
+      } catch (e) {
+        console.warn(`[GeminiClient] Failed to parse credentials file, falling back to project ID: ${projectId}`);
+      }
+    } else {
+      // Cloud Run: Use automatic credential discovery
+      // The VertexAI client will automatically use the service account attached to the Cloud Run service
+      console.log(`[GeminiClient] No credentials file found; using Cloud Run automatic authentication`);
     }
 
-    const credentialsPath = possiblePaths[0];
-    console.log(`[GeminiClient] Loading credentials from: ${credentialsPath}`);
-
-    // Set env var to ensure auth library can find it
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-
-    const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf-8'));
-
+    // Initialize VertexAI client
+    // In Cloud Run, this will automatically use the attached service account
+    // In local dev, it will use the GOOGLE_APPLICATION_CREDENTIALS file
     this.vertexAI = new VertexAI({
-      project: credentials.project_id || projectId,
+      project: resolvedProjectId,
       location,
       apiEndpoint: `${location}-aiplatform.googleapis.com`,
     });
 
     this.modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
     this.maxRetries = Math.max(0, parseInt(process.env.GEMINI_MAX_RETRIES || '0', 10));
-    console.log(`[GeminiClient] Retry attempts per request: ${this.maxRetries}`);
+    console.log(`[GeminiClient] Initialized with project=${resolvedProjectId}, model=${this.modelName}, maxRetries=${this.maxRetries}`);
   }
 
   private async throttleRequest(): Promise<void> {
