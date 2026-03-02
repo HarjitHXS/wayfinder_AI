@@ -261,6 +261,12 @@ IMPORTANT: Return a JSON object with a SEQUENCE of ALL actions needed to complet
 
 Look for red numeric labels on interactive elements. Use [data-wayfinder-id="X"] selectors where X is the label number.
 
+      FORM FILLING GUIDANCE:
+      - Inputs may include helpful metadata: data-wayfinder-label, data-wayfinder-placeholder, data-wayfinder-name, data-wayfinder-type, data-wayfinder-required
+      - Prefer fields whose label/placeholder/name clearly matches the requested data (email, phone, date, address, zip, name)
+      - Fill required fields first, top to bottom, then submit
+      - If you submit and see validation errors, target the field with the error and correct it
+
 ACTION TYPES:
 - "click": Click element (requires selector)
 - "type": Type text (requires selector and text)
@@ -523,6 +529,8 @@ ${previousContext ? `Previous context: ${previousContext}` : ''}
 
 Analyze the current state of the page and determine the next action(s) needed to progress toward the goal.
 Consider the visibility of elements, the current content, and the most efficient path forward.
+
+When filling forms, use data-wayfinder-label/placeholder/name/type to match the correct field. Fill required fields first and fix validation errors if they appear after submit.
 
 Remember to respond ONLY with valid JSON matching the expected format.`;
 

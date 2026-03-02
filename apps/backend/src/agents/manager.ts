@@ -31,6 +31,7 @@ export class AgentManager {
     };
 
     try {
+      const screenshotOptions = { quality: 60, clipToViewport: true };
       console.log('[AgentManager] Starting adaptive plan-execute approach');
 
       // ── Navigate ──────────────────────────────────────
@@ -40,7 +41,7 @@ export class AgentManager {
 
       // ── Plan (API Call #1) ────────────────────────────
       await this.browserController.addLabels();
-      const initialScreenshot = await this.browserController.screenshot();
+      const initialScreenshot = await this.browserController.screenshot(screenshotOptions);
       this.task.currentScreenshot = initialScreenshot.toString('base64');
       await this.browserController.removeLabels();
 
@@ -93,7 +94,7 @@ export class AgentManager {
         }
 
         // ── Capture result screenshot ───────────────────
-        const resultScreenshot = await this.browserController.screenshot();
+        const resultScreenshot = await this.browserController.screenshot(screenshotOptions);
 
         const step: ExecutionStep = {
           stepNumber: stepCount + 1,
@@ -121,7 +122,7 @@ export class AgentManager {
           console.log('[AgentManager] Page may have changed — re-planning remaining steps');
 
           await this.browserController.addLabels();
-          const freshScreenshot = await this.browserController.screenshot();
+          const freshScreenshot = await this.browserController.screenshot(screenshotOptions);
           await this.browserController.removeLabels();
 
           const remainingContext = `Continue task: "${taskDescription}". ` +
@@ -154,7 +155,7 @@ export class AgentManager {
       } else {
         // Complex or partially failed — verify with Gemini
         console.log('[AgentManager] Verifying task completion...');
-        const finalScreenshot = await this.browserController.screenshot();
+        const finalScreenshot = await this.browserController.screenshot(screenshotOptions);
         const verification = await this.geminiClient.verifyTaskCompletion(
           finalScreenshot,
           taskDescription,
@@ -206,8 +207,9 @@ export class AgentManager {
 
       await this.browserController.smartWait(400);
 
+      const screenshotOptions = { quality: 60, clipToViewport: true };
       await this.browserController.addLabels();
-      const initialScreenshot = await this.browserController.screenshot();
+      const initialScreenshot = await this.browserController.screenshot(screenshotOptions);
       this.task.currentScreenshot = initialScreenshot.toString('base64');
       await this.browserController.removeLabels();
 
@@ -285,7 +287,7 @@ export class AgentManager {
           await this.browserController.smartWait(300);
         }
 
-        const resultScreenshot = await this.browserController.screenshot();
+        const resultScreenshot = await this.browserController.screenshot(screenshotOptions);
 
         const step: ExecutionStep = {
           stepNumber: initialStepCount + additionalSteps + 1,
@@ -311,7 +313,7 @@ export class AgentManager {
           console.log('[AgentManager] Page may have changed — re-planning remaining steps');
 
           await this.browserController.addLabels();
-          const freshScreenshot = await this.browserController.screenshot();
+          const freshScreenshot = await this.browserController.screenshot(screenshotOptions);
           await this.browserController.removeLabels();
 
           const remainingContext = `Continue instruction: "${instruction}". ` +
@@ -345,7 +347,7 @@ export class AgentManager {
         console.log('[AgentManager] Skipping continuation verification API call');
       } else {
         console.log('[AgentManager] Verifying continuation...');
-        const finalScreenshot = await this.browserController.screenshot();
+        const finalScreenshot = await this.browserController.screenshot(screenshotOptions);
         const verification = await this.geminiClient.verifyTaskCompletion(
           finalScreenshot,
           instruction,
@@ -375,7 +377,7 @@ export class AgentManager {
 
   async analyzeWebsite(url: string): Promise<any> {
     await this.browserController.navigateToUrl(url);
-    const screenshot = await this.browserController.screenshot();
+    const screenshot = await this.browserController.screenshot({ quality: 60, clipToViewport: true });
     return await this.geminiClient.analyzeWebsite(screenshot, url);
   }
 

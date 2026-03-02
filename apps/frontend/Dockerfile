@@ -13,12 +13,12 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-RUN npm install -g http-server
+RUN npm install -g serve
 
 COPY --from=builder /app/dist/autosteer-frontend ./dist
 
 # Add a script to inject BACKEND_URL into window.__env__ at runtime
-RUN printf '#!/bin/sh\nset -e\necho "window.__env__ = { API_URL: \\"${BACKEND_URL:-http://localhost:3001}\\", PRODUCTION: true };" > /app/dist/config.js\nexec http-server dist -p 8080 -c-1 --gzip\n' > /app/entrypoint.sh && \
+RUN printf '#!/bin/sh\nset -e\necho "window.__env__ = { API_URL: \\"${BACKEND_URL:-http://localhost:3001}\\", PRODUCTION: true };" > /app/dist/config.js\nexec serve -s dist -l 8080\n' > /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh
 
  # Add a simple health check script

@@ -73,7 +73,7 @@ jobs:
             --timeout=300 \
             --concurrency=80 \
             --set-env-vars="NODE_ENV=production,FRONTEND_URL=${FRONTEND_URL},SINGLE_MODEL_REQUEST_MODE=true,GEMINI_MAX_RETRIES=0" \
-            --set-secrets="FIREBASE_ADMIN_KEY=FIREBASE_ADMIN_KEY:latest,SESSION_SECRET=SESSION_SECRET:latest,JWT_SECRET=JWT_SECRET:latest,ENCRYPTION_KEY=ENCRYPTION_KEY:latest" \
+            --set-secrets="FIREBASE_SERVICE_ACCOUNT=FIREBASE_ADMIN_KEY:latest,SESSION_SECRET=SESSION_SECRET:latest,JWT_SECRET=JWT_SECRET:latest,ENCRYPTION_KEY=ENCRYPTION_KEY:latest" \
             --service-account=wayfinder-backend-sa@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
           
           BACKEND_URL=$(gcloud run services describe wayfinder-backend \

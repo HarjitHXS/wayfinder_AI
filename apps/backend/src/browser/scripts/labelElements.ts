@@ -2,6 +2,38 @@ export const LABEL_ELEMENTS_SCRIPT = `
 (function() {
   document.querySelectorAll('.wayfinder-label').forEach(el => el.remove());
 
+  function normalizeText(value) {
+    return (value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function getAssociatedLabelText(el) {
+    const ariaLabel = normalizeText(el.getAttribute('aria-label'));
+    if (ariaLabel) return ariaLabel;
+
+    const ariaLabelledBy = el.getAttribute('aria-labelledby');
+    if (ariaLabelledBy) {
+      const labelledEl = document.getElementById(ariaLabelledBy);
+      const labelledText = normalizeText(labelledEl ? labelledEl.textContent : '');
+      if (labelledText) return labelledText;
+    }
+
+    const wrappedLabel = el.closest('label');
+    const wrappedText = normalizeText(wrappedLabel ? wrappedLabel.textContent : '');
+    if (wrappedText) return wrappedText;
+
+    const id = el.getAttribute('id');
+    if (id) {
+      const forLabel = document.querySelector('label[for="' + id.replace(/"/g, '\\"') + '"]');
+      const forText = normalizeText(forLabel ? forLabel.textContent : '');
+      if (forText) return forText;
+    }
+
+    const placeholder = normalizeText(el.getAttribute('placeholder'));
+    if (placeholder) return placeholder;
+
+    return '';
+  }
+
   const interactiveSelectors = [
     'a', 'button', 'input', 'textarea', 'select', 
     '[role="button"]', '[role="link"]', '[role="menuitem"]',
@@ -21,6 +53,13 @@ export const LABEL_ELEMENTS_SCRIPT = `
   elements.forEach((el, index) => {
     const id = index + 1;
     const rect = el.getBoundingClientRect();
+    const labelText = getAssociatedLabelText(el);
+    const tagName = normalizeText(el.tagName).toLowerCase();
+    const typeAttr = normalizeText(el.getAttribute('type')) || (el.type ? normalizeText(el.type) : '');
+    const nameAttr = normalizeText(el.getAttribute('name'));
+    const placeholderAttr = normalizeText(el.getAttribute('placeholder'));
+    const roleAttr = normalizeText(el.getAttribute('role'));
+    const requiredAttr = el.required || el.getAttribute('aria-required') === 'true' ? 'true' : 'false';
     
     const label = document.createElement('div');
     label.className = 'wayfinder-label';
@@ -42,6 +81,13 @@ export const LABEL_ELEMENTS_SCRIPT = `
 
     document.body.appendChild(label);
     el.setAttribute('data-wayfinder-id', id.toString());
+    if (labelText) el.setAttribute('data-wayfinder-label', labelText);
+    if (nameAttr) el.setAttribute('data-wayfinder-name', nameAttr);
+    if (placeholderAttr) el.setAttribute('data-wayfinder-placeholder', placeholderAttr);
+    if (typeAttr) el.setAttribute('data-wayfinder-type', typeAttr);
+    if (roleAttr) el.setAttribute('data-wayfinder-role', roleAttr);
+    if (tagName) el.setAttribute('data-wayfinder-tag', tagName);
+    el.setAttribute('data-wayfinder-required', requiredAttr);
   });
 
   return elements.length;

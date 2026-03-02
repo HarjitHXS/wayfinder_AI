@@ -5,6 +5,7 @@ import * as path from 'path';
 import { LABEL_ELEMENTS_SCRIPT } from './scripts/labelElements';
 
 export class BrowserController {
+  private readonly defaultScreenshotQuality = 60;
   async navigateToUrl(url: string): Promise<void> {
     await browserPool.ensurePageReady();
     const page = await browserPool.getPage();
@@ -28,12 +29,22 @@ export class BrowserController {
     }, 'removeLabels');
   }
 
-  async screenshot(): Promise<Buffer> {
+  async screenshot(options?: { quality?: number; fullPage?: boolean; clipToViewport?: boolean }): Promise<Buffer> {
     return await this.withPageRetry(async (page) => {
+      const quality = options?.quality ?? this.defaultScreenshotQuality;
+      const fullPage = options?.fullPage ?? false;
+      const clipToViewport = options?.clipToViewport ?? true;
+      const viewport = page.viewportSize();
+      const clip = clipToViewport && !fullPage && viewport
+        ? { x: 0, y: 0, width: viewport.width, height: viewport.height }
+        : undefined;
+
       const screenshot = await page.screenshot({
           type: 'jpeg',
-          quality: 70,  // Slightly lower for faster transfer + less tokens
-          scale: 'css'
+          quality,
+          scale: 'css',
+          fullPage,
+          clip
       });
 
       return Buffer.from(screenshot);
