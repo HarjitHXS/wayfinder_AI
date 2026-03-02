@@ -24,7 +24,7 @@ export interface Suggestion {
 export interface TaskExecution {
   id: string;
   taskDescription: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
   steps: ExecutionStep[];
   currentScreenshot: string;
   error?: string;

@@ -95,6 +95,7 @@
             <app-task-form 
               (onSubmit)="onTaskSubmit($event)" 
               (onContinue)="onTaskContinue($event)"
+              (onStop)="onTaskStop()"
               [loading]="!!(loading$ | async) || showTrialExpired"
               [canContinue]="canContinue && !(loading$ | async)"
               [preferContinue]="preferContinue && !(loading$ | async)">

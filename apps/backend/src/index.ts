@@ -107,6 +107,7 @@ const agentRateLimit = rateLimit({ windowMs: config.rateLimits.agent.windowMs, m
 
 app.post('/api/agent/execute', agentRateLimit, validateTaskInput, agentController.executeTask);
 app.post('/api/agent/continue/:sessionId', agentRateLimit, validateContinueInput, agentController.continueTask);
+app.post('/api/agent/cancel/:sessionId', agentRateLimit, agentController.cancelTask);
 app.get('/api/agent/status/:sessionId', agentController.getTaskStatus);
 app.post('/api/agent/analyze', agentRateLimit, validateTaskInput, agentController.analyzeWebsite);
 app.post('/api/agent/cleanup/:sessionId', agentController.cleanupSession);
@@ -147,7 +148,7 @@ app.get('/api/agent/stream/:sessionId', (req: Request, res: Response) => {
     }
 
     // Close stream when task finishes
-    if (task.status === 'completed' || task.status === 'failed') {
+    if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
       clearInterval(interval);
       res.write(`data: ${JSON.stringify(task)}\n\n`);
       res.end();

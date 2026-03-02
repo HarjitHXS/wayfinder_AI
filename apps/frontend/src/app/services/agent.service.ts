@@ -200,13 +200,31 @@ export class AgentService {
     poll();
   }
 
-  cancelTask(): void {
+  async cancelTask(): Promise<void> {
+    // Close frontend polling/streaming
     this.closeStream();
     if (this.pollHandle) {
       clearTimeout(this.pollHandle);
       this.pollHandle = null;
     }
     this.loadingSubject.next(false);
+
+    // Call backend to cancel the running task
+    if (this.currentSessionId) {
+      try {
+        const token = await this.authService.getIdToken();
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        await axios.post(`${this.apiUrl}/api/agent/cancel/${this.currentSessionId}`, {}, { headers });
+        console.log('Task cancelled on backend:', this.currentSessionId);
+      } catch (error) {
+        console.error('Error cancelling task on backend:', error);
+      }
+    }
+
     this.currentSessionId = null;
   }
 

@@ -185,6 +185,11 @@ export class HomeComponent implements OnInit, OnDestroy {
     await this.executeContinue(instruction);
   }
 
+  async onTaskStop(): Promise<void> {
+    await this.agentService.cancelTask();
+    this.sessionId = null;
+  }
+
 
 
   async submitUsername(): Promise<void> {

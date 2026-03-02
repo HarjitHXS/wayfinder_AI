@@ -256,3 +256,55 @@ export async function cleanupSession(req: Request, res: Response) {
   }
 }
 
+export async function cancelTask(req: AuthRequest, res: Response) {
+  try {
+    const { sessionId } = req.params;
+
+    const firebaseEnabled = isFirebaseEnabled();
+    
+    // Get session entry to check ownership
+    const entry = sessionManager.getSessionEntry(sessionId);
+    if (!entry) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    // Security: Verify ownership if Firebase is enabled
+    if (firebaseEnabled && (!entry.ownerUid || entry.ownerUid !== req.user?.uid)) {
+      return res.status(403).json({ error: 'Forbidden. Session does not belong to user.' });
+    }
+
+    // Try to remove from queue if pending
+    const removedFromQueue = queue.cancel(sessionId);
+
+    // Check if it's currently running
+    const isCurrentlyRunning = queue.getCurrentSessionId() === sessionId;
+
+    // Update session status to cancelled
+    const cancelledTask: TaskExecution = {
+      ...entry.task,
+      status: 'cancelled',
+      updatedAt: new Date(),
+    };
+    sessionManager.updateSession(sessionId, cancelledTask);
+
+    // If currently running, close browser to abort
+    if (isCurrentlyRunning) {
+      console.log(`[cancelTask] Aborting running task ${sessionId}, closing browser...`);
+      await browserPool.close();
+      // Re-initialize for next task
+      await initializeBrowserPool();
+    }
+
+    res.json({
+      message: 'Task cancelled',
+      sessionId,
+      removedFromQueue,
+      wasRunning: isCurrentlyRunning,
+      task: cancelledTask,
+    });
+  } catch (error) {
+    console.error('[cancelTask] Error:', error);
+    res.status(500).json({ error: 'Failed to cancel task', details: error instanceof Error ? error.message : String(error) });
+  }
+}
+
