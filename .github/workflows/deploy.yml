@@ -20,9 +20,13 @@ on:
 env:
   GCP_REGION: us-central1
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_PROJECT_NUMBER: ${{ secrets.GCP_PROJECT_NUMBER }}
   ARTIFACT_REGISTRY: us-central1-docker.pkg.dev
   MIN_INSTANCES: 1
   MAX_INSTANCES: 5
+  # Stable Cloud Run URLs (project-number based, never change)
+  BACKEND_URL: https://wayfinder-backend-${{ secrets.GCP_PROJECT_NUMBER }}.${{ vars.GCP_REGION || 'us-central1' }}.run.app
+  FRONTEND_URL: https://wayfinder-frontend-${{ secrets.GCP_PROJECT_NUMBER }}.${{ vars.GCP_REGION || 'us-central1' }}.run.app
 
 jobs:
   deploy:
@@ -56,11 +60,6 @@ jobs:
           
           IMAGE="${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/wayfinder/backend:${TAG}"
           
-          # Get frontend URL for CORS
-          FRONTEND_URL=$(gcloud run services describe wayfinder-frontend \
-            --region=${{ env.GCP_REGION }} \
-            --format='value(status.url)' 2>/dev/null || echo "http://localhost:3000")
-          
           gcloud run deploy wayfinder-backend \
             --image=${IMAGE} \
             --region=${{ env.GCP_REGION }} \
@@ -72,16 +71,12 @@ jobs:
             --memory=2Gi \
             --timeout=300 \
             --concurrency=80 \
-            --set-env-vars="NODE_ENV=production,FRONTEND_URL=${FRONTEND_URL},SINGLE_MODEL_REQUEST_MODE=true,GEMINI_MAX_RETRIES=0" \
+            --set-env-vars="NODE_ENV=production,FRONTEND_URL=${{ env.FRONTEND_URL }},SINGLE_MODEL_REQUEST_MODE=true,GEMINI_MAX_RETRIES=0" \
             --set-secrets="FIREBASE_SERVICE_ACCOUNT=FIREBASE_ADMIN_KEY:latest,SESSION_SECRET=SESSION_SECRET:latest,JWT_SECRET=JWT_SECRET:latest,ENCRYPTION_KEY=ENCRYPTION_KEY:latest" \
             --service-account=wayfinder-backend-sa@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
           
-          BACKEND_URL=$(gcloud run services describe wayfinder-backend \
-            --region=${{ env.GCP_REGION }} \
-            --format='value(status.url)')
-          
-          echo "backend_url=${BACKEND_URL}" >> $GITHUB_OUTPUT
-          echo "✅ Backend deployed: ${BACKEND_URL}"
+          echo "backend_url=${{ env.BACKEND_URL }}" >> $GITHUB_OUTPUT
+          echo "✅ Backend deployed: ${{ env.BACKEND_URL }}"
 
       - name: Deploy Frontend
         if: github.event.inputs.service == 'frontend' || github.event.inputs.service == 'both'
@@ -92,11 +87,6 @@ jobs:
           fi
           
           IMAGE="${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/wayfinder/frontend:${TAG}"
-          
-          # Get backend URL
-          BACKEND_URL=$(gcloud run services describe wayfinder-backend \
-            --region=${{ env.GCP_REGION }} \
-            --format='value(status.url)')
           
           gcloud run deploy wayfinder-frontend \
             --image=${IMAGE} \
@@ -109,27 +99,19 @@ jobs:
             --memory=512Mi \
             --timeout=60 \
             --concurrency=80 \
-            --set-env-vars="NODE_ENV=production,BACKEND_URL=${BACKEND_URL}" \
+            --set-env-vars="NODE_ENV=production,BACKEND_URL=${{ env.BACKEND_URL }}" \
             --execution-environment=gen1
           
-          FRONTEND_URL=$(gcloud run services describe wayfinder-frontend \
-            --region=${{ env.GCP_REGION }} \
-            --format='value(status.url)')
-          
-          echo "frontend_url=${FRONTEND_URL}" >> $GITHUB_OUTPUT
-          echo "✅ Frontend deployed: ${FRONTEND_URL}"
+          echo "frontend_url=${{ env.FRONTEND_URL }}" >> $GITHUB_OUTPUT
+          echo "✅ Frontend deployed: ${{ env.FRONTEND_URL }}"
 
       - name: Health Check
         if: success()
         run: |
           if [ "${{ github.event.inputs.service }}" == "backend" ] || [ "${{ github.event.inputs.service }}" == "both" ]; then
-            BACKEND_URL=$(gcloud run services describe wayfinder-backend \
-              --region=${{ env.GCP_REGION }} \
-              --format='value(status.url)')
-            
             echo "Testing backend health..."
             for i in {1..5}; do
-              if curl -f "${BACKEND_URL}/health" > /dev/null 2>&1; then
+              if curl -f "${{ env.BACKEND_URL }}/health" > /dev/null 2>&1; then
                 echo "✅ Backend is healthy"
                 break
               fi
@@ -148,15 +130,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ github.event.inputs.service }}" == "backend" ] || [ "${{ github.event.inputs.service }}" == "both" ]; then
-            BACKEND_URL=$(gcloud run services describe wayfinder-backend \
-              --region=${{ env.GCP_REGION }} \
-              --format='value(status.url)')
-            echo "**Backend:** ${BACKEND_URL}" >> $GITHUB_STEP_SUMMARY
+            echo "**Backend:** ${{ env.BACKEND_URL }}" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [ "${{ github.event.inputs.service }}" == "frontend" ] || [ "${{ github.event.inputs.service }}" == "both" ]; then
-            FRONTEND_URL=$(gcloud run services describe wayfinder-frontend \
-              --region=${{ env.GCP_REGION }} \
-              --format='value(status.url)')
-            echo "**Frontend:** ${FRONTEND_URL}" >> $GITHUB_STEP_SUMMARY
+            echo "**Frontend:** ${{ env.FRONTEND_URL }}" >> $GITHUB_STEP_SUMMARY
           fi
