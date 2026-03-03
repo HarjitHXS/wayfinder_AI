@@ -1,6 +1,7 @@
-// Firebase configuration - values populated from environment variables at build time or runtime
+// Firebase configuration - values populated from runtime window.__env__
 // For Cloud Run deployment, set these environment variables:
-// NG_APP_FIREBASE_API_KEY, NG_APP_FIREBASE_AUTH_DOMAIN, NG_APP_FIREBASE_PROJECT_ID, etc.
+// FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_PROJECT_ID, FIREBASE_STORAGE_BUCKET,
+// FIREBASE_MESSAGING_SENDER_ID, FIREBASE_APP_ID
 
 interface FirebaseConfigType {
   apiKey: string;
@@ -21,10 +22,10 @@ function getConfigValue(key: string, defaultValue: string = ''): string {
 }
 
 export const firebaseConfig: FirebaseConfigType = {
-  apiKey: getConfigValue('FIREBASE_API_KEY', 'AIzaSyC6Ww5ipt_2j0dn142ivIlx3KVcr9L48dQ'),
-  authDomain: getConfigValue('FIREBASE_AUTH_DOMAIN', 'wayfinder-ui-d87e8.firebaseapp.com'),
-  projectId: getConfigValue('FIREBASE_PROJECT_ID', 'wayfinder-ui-d87e8'),
-  storageBucket: getConfigValue('FIREBASE_STORAGE_BUCKET', 'wayfinder-ui-d87e8.firebasestorage.app'),
-  messagingSenderId: getConfigValue('FIREBASE_MESSAGING_SENDER_ID', '468644110623'),
-  appId: getConfigValue('FIREBASE_APP_ID', '1:468644110623:web:4f6ab14196f74c98c2902a'),
+  apiKey: getConfigValue('FIREBASE_API_KEY'),
+  authDomain: getConfigValue('FIREBASE_AUTH_DOMAIN'),
+  projectId: getConfigValue('FIREBASE_PROJECT_ID'),
+  storageBucket: getConfigValue('FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: getConfigValue('FIREBASE_MESSAGING_SENDER_ID'),
+  appId: getConfigValue('FIREBASE_APP_ID'),
 };

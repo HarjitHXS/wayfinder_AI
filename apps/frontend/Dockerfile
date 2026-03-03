@@ -17,8 +17,8 @@ RUN npm install -g serve
 
 COPY --from=builder /app/dist/autosteer-frontend ./dist
 
-# Add a script to inject BACKEND_URL into window.__env__ at runtime
-RUN printf '#!/bin/sh\nset -e\necho "window.__env__ = { API_URL: \\"${BACKEND_URL:-http://localhost:3001}\\", PRODUCTION: true };" > /app/dist/config.js\nexec serve -s dist -l 8080\n' > /app/entrypoint.sh && \
+# Add a script to inject runtime configuration into window.__env__
+RUN printf '#!/bin/sh\nset -e\necho "window.__env__ = { API_URL: \\"${BACKEND_URL:-http://localhost:3001}\\", FIREBASE_API_KEY: \\"${FIREBASE_API_KEY:-}\\", FIREBASE_AUTH_DOMAIN: \\"${FIREBASE_AUTH_DOMAIN:-}\\", FIREBASE_PROJECT_ID: \\"${FIREBASE_PROJECT_ID:-}\\", FIREBASE_STORAGE_BUCKET: \\"${FIREBASE_STORAGE_BUCKET:-}\\", FIREBASE_MESSAGING_SENDER_ID: \\"${FIREBASE_MESSAGING_SENDER_ID:-}\\", FIREBASE_APP_ID: \\"${FIREBASE_APP_ID:-}\\", PRODUCTION: true };" > /app/dist/config.js\nexec serve -s dist -l 8080\n' > /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh
 
  # Add a simple health check script

@@ -113,6 +113,15 @@ FRONTEND_URL=http://localhost:3000
 
 # Frontend
 VITE_API_URL=http://localhost:3001
+
+# Frontend runtime config (Cloud Run / Docker)
+# Injected into /dist/config.js as window.__env__
+FIREBASE_API_KEY=your-firebase-api-key
+FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+FIREBASE_MESSAGING_SENDER_ID=your-firebase-messaging-sender-id
+FIREBASE_APP_ID=your-firebase-app-id
 ```
 
 ### Option 1: Local Development
