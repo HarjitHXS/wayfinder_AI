@@ -8,6 +8,49 @@
 
 **Wayfinder AI** is a next-generation AI agent that helps users navigate and automate web interfaces through visual understanding. By leveraging Google's Gemini 2.0 Flash multimodal model, it interprets screenshots, understands complex UI layouts, and executes precise browser actions based on natural language instructions.
 
+## ✨ Project Overview
+- **Live app**: https://wayfinder-frontend-217925507238.us-central1.run.app/app
+- **Center panel (Agent Vision)**: shows what the agent sees and did on the page.
+- **Bottom-left**: custom URL input where you enter the starting website.
+- **Right panel**: task chat (type the task), **Speak** button for voice input, and **Send** button to start execution.
+- **Logs & Debug**: see step-by-step actions the agent took to complete the task.
+
+## 📖 Usage
+
+**Try it now**: https://wayfinder-frontend-217925507238.us-central1.run.app/app
+
+### 1. Sign In (Optional)
+- Click **Sign In** in the top-right if you want history and saved sessions
+- Authenticate with Google account
+
+### 2. Create Task
+- **Starting URL**: Enter a custom URL in the bottom-left input
+- **Task Description**: Use the right-side chat box to describe what you want the agent to do
+- Optional: Use **Speak** for voice input, then hit **Send** to start
+
+Examples:
+
+```
+URL: https://secure.devpost.com/users/login?ref=top-nav-login
+Task: "Fill email 'john@example.com'"
+```
+
+### 3. Monitor Execution
+The agent will:
+1. Navigate to the URL
+2. Take a screenshot
+3. Analyze the UI with Gemini
+4. Plan the next action
+5. Execute the action (click, type, scroll)
+6. Repeat until task completes
+
+Watch the execution log to see each step and the agent's reasoning, and track progress in the Agent Vision panel.
+
+### 4. View Results
+- **Screenshot Viewer**: See the current state of the website
+- **Execution Log**: Review all actions taken with timestamps
+- **Task History**: Access completed tasks anytime
+
 ## 🎯 Challenge Category
 
 **Google Gemini Live Agent Challenge 2026** - **UI Navigator Category**
@@ -79,6 +122,10 @@ Target Website
 
 ## 🚀 Quick Start
 
+**Want to contribute or run locally?** This section is for developers. For using the live app, go to [Project Overview](#-project-overview) and [Usage](#-usage) above.
+
+For full, reproducible setup and testing steps, see [REPRODUCING.md](REPRODUCING.md).
+
 ### Prerequisites
 
 - **Node.js** 18+ (for local development)
@@ -142,47 +189,6 @@ npm run frontend
 ```
 
 **Access**: http://localhost:3000
-
----
-
-## 📖 Usage
-
-### 1. Sign In
-- Click "Sign In / Sign Up" button
-- Authenticate with Google account
-- Grant necessary permissions
-
-### 2. Create Task
-In the task form, provide:
-- **Starting URL**: The website you want to interact with
-- **Task Description**: What you want the agent to do
-
-Examples:
-```
-URL: https://example.com/form
-Task: "Fill out the contact form with name 'John Doe' and email 'john@example.com', then click Submit"
-```
-
-```
-URL: https://ecommerce.com
-Task: "Search for 'wireless headphones', filter by price $50-100, and add the first result to cart"
-```
-
-### 3. Monitor Execution
-The agent will:
-1. Navigate to the URL
-2. Take a screenshot
-3. Analyze the UI with Gemini
-4. Plan the next action
-5. Execute the action (click, type, scroll)
-6. Repeat until task completes
-
-Watch the execution log to see each step and the agent's reasoning.
-
-### 4. View Results
-- **Screenshot Viewer**: See the current state of the website
-- **Execution Log**: Review all actions taken with timestamps
-- **Task History**: Access completed tasks anytime
 
 ---
 

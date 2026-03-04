@@ -2,198 +2,711 @@
 
 ## High-Level Architecture
 
-```mermaid
-graph TB
-    subgraph Client["🖥️ Frontend (Angular 17)"]
-        Home["Home<br/>Component"]
-        TaskForm["Task Form<br/>Component"]
-        Screenshot["Screenshot<br/>Viewer"]
-        ExecLog["Execution<br/>Log"]
-        Idle["Agent Idle<br/>State"]
-        Loading["Agent Loading<br/>State"]
-        Auth["Auth Modal<br/>Component"]
-        Theme["Theme<br/>Toggle"]
-        UserMenu["User<br/>Menu"]
-    end
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         USER INTERACTION                            │
+│                                                                     │
+│   🎤 Voice Input ────┐                        ┌──── 🔊 Voice Output│
+│   ⌨️  Text Input ────┤                        │                     │
+│                      │                        │                     │
+└──────────────────────┼────────────────────────┼─────────────────────┘
+                       │                        │
+                       ▼                        ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                    ANGULAR FRONTEND (Firebase Hosting)               │
+│                                                                      │
+│  ┌──────────────┐  ┌──────────────────┐  ┌─────────────────────┐  │
+│  │  Task Form   │  │ Screenshot       │  │  Execution Log      │  │
+│  │ Component    │  │ Viewer           │  │  Component          │  │
+│  │              │  │                  │  │                     │  │
+│  │ - URL input  │  │ - Live updates   │  │ - Step tracking    │  │
+│  │ - Voice UI   │  │ - 16:9 display   │  │ - Voice narration  │  │
+│  └──────────────┘  └──────────────────┘  └─────────────────────┘  │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │              Voice Service (Web Speech API)                  │  │
+│  │  - Speech Recognition (STT)                                  │  │
+│  │  - Speech Synthesis (TTS)                                    │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└──────────────────────────┬────────────────────▲──────────────────────┘
+                           │                    │
+                HTTP/REST  │                    │  JSON + Base64
+                           │                    │  Screenshots
+                           ▼                    │
+┌───────────────────────────────────────────────────────────────────────┐
+│              NODE.JS BACKEND (Google Cloud Run)                       │
+│                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────┐ │
+│  │                     Express.js Server                           │ │
+│  │  ┌──────────────────┐          ┌─────────────────────────┐     │ │
+│  │  │ Agent Controller │          │  User Controller        │     │ │
+│  │  │ - /execute       │          │  - Health checks        │     │ │
+│  │  │ - /status        │          │                         │     │ │
+│  │  └──────────────────┘          └─────────────────────────┘     │ │
+│  └─────────────────────────────────────────────────────────────────┘ │
+│                           │                │                          │
+│                           │                │                          │
+│                           ▼                ▼                          │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │                    AGENT MANAGER                               │  │
+│  │                                                                │  │
+│  │  Orchestrates the AI decision loop:                           │  │
+│  │  1. Take screenshot                                           │  │
+│  │  2. Send to Gemini for analysis                              │  │
+│  │  3. Get action decision                                       │  │
+│  │  4. Execute browser action                                    │  │
+│  │  5. Update task state                                         │  │
+│  │  6. Repeat until complete                                     │  │
+│  └───────────┬──────────────────────────┬─────────────────────────┘  │
+│              │                          │                            │
+│              │                          │                            │
+│              ▼                          ▼                            │
+│  ┌─────────────────────┐    ┌─────────────────────────────────┐    │
+│  │   GEMINI CLIENT     │    │  BROWSER CONTROLLER             │    │
+│  │                     │    │                                 │    │
+│  │ - Screenshot        │    │ - Playwright integration        │    │
+│  │   analysis          │    │ - Browser pool management      │    │
+│  │ - Decision making   │    │ - Action execution:            │    │
+│  │ - Task completion   │    │   * Click                      │    │
+│  │   detection         │    │   * Type                       │    │
+│  │ - Personality       │    │   * Navigate                   │    │
+│  │   prompts           │    │   * Scroll                     │    │
+│  │ - Rate limiting     │    │   * Screenshot                 │    │
+│  │ - Error handling    │    │ - Auto-recovery                │    │
+│  └─────────┬───────────┘    └──────────┬──────────────────────┘    │
+│            │                           │                            │
+└────────────┼───────────────────────────┼────────────────────────────┘
+             │                           │
+             │                           │
+             ▼                           ▼
+┌─────────────────────────┐   ┌────────────────────────────────────┐
+│   GOOGLE CLOUD          │   │     CHROMIUM BROWSER               │
+│   VERTEX AI API         │   │                                    │
+│                         │   │  ┌──────────────────────────────┐  │
+│  ┌──────────────────┐   │   │  │  Headless Browser Instance   │  │
+│  │  Gemini 2.0      │   │   │  │                              │  │
+│  │  Flash Model     │   │   │  │  - Renders web pages        │  │
+│  │                  │   │   │  │  - Executes JavaScript      │  │
+│  │ Multimodal:      │   │   │  │  - Takes screenshots        │  │
+│  │ - Vision         │   │   │  │  - Navigates websites       │  │
+│  │ - Language       │   │   │  └──────────────────────────────┘  │
+│  │ - Reasoning      │   │   │                                    │
+│  └──────────────────┘   │   └────────────────────────────────────┘
+│                         │
+│  Features Used:         │
+│  - Image understanding  │                  ┌──────────────────────┐
+│  - JSON output          │                  │  EXTERNAL WEBSITES   │
+│  - Function calling     │◄─────────────────┤                      │
+│  - Rate limit handling  │    Automation    │  - google.com       │
+│                         │    target        │  - amazon.com       │
+└─────────────────────────┘                  │  - any website      │
+                                             └──────────────────────┘
 
-    subgraph API["REST API Layer"]
-        AgentAPI["Agent<br/>Endpoints"]
-        AuthAPI["Auth<br/>Endpoints"]
-        VoiceAPI["Voice<br/>Endpoints"]
-        HistoryAPI["History<br/>Endpoints"]
-    end
+KEY FEATURES:
+══════════════
 
-    subgraph Backend["⚙️ Backend (Node.js + Express)"]
-        Controller["Agent<br/>Controller"]
-        Manager["Agent<br/>Manager"]
-        SessionMgr["Session<br/>Manager"]
-        HistoryMgr["History<br/>Manager"]
-    end
+🎤 MULTIMODAL INPUT                    🎯 VISUAL UNDERSTANDING
+   - Voice commands                       - Screenshot analysis
+   - Text input                           - No DOM required
+   - Natural language                     - Works on any site
 
-    subgraph Core["🧠 Intelligence & Automation"]
-        Gemini["Gemini 2.0 Flash<br/>Multimodal"]
-        Browser["Playwright<br/>Browser<br/>Controller"]
-    end
+🤖 INTELLIGENT AGENT                   🔄 FEEDBACK LOOP
+   - Gemini decision making               - Real-time adaptation  
+   - Personality & voice                  - Error recovery
+   - Context awareness                    - Task completion detection
 
-    subgraph Storage["💾 Data Layer"]
-        Firebase["Firebase<br/>Firestore"]
-        Cache["Session<br/>Cache"]
-    end
+☁️  GOOGLE CLOUD NATIVE                📊 LIVE MONITORING
+   - Fully hosted on GCP                  - Real-time screenshots
+   - Vertex AI integration                - Step-by-step logging
+   - Scalable architecture                - Voice narration
+```
 
-    subgraph External["🌐 External Services"]
-        Website["Target<br/>Website"]
-        GCloud["Google Cloud<br/>Vertex AI"]
-    end
+## System Integration Diagram (Gemini Connections)
 
-    Client -->|JSON REST| API
-    API -->|Routes| Backend
-    Backend -->|Orchestrates| Core
-    Browser -->|Screenshots<br/>+ Context| Gemini
-    Gemini -->|Analysis &<br/>Actions| Browser
-    Browser -->|Automates| Website
-    Backend -->|Stores/Updates| Storage
-    Cache -->|Session<br/>State| Manager
-    Firebase -->|Persist| Storage
-    Gemini -->|Uses| GCloud
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                        📡 SYSTEM INTEGRATION LAYER                         │
+│                                                                             │
+│  Shows how Gemini, Frontend, Backend, and Database communicate             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-    style Client fill:#e1f5ff
-    style API fill:#f3e5f5
-    style Backend fill:#fff3e0
-    style Core fill:#e8f5e9
-    style Storage fill:#fce4ec
-    style External fill:#f1f8e9
+                                                   ┌──────────────────────┐
+                                                   │   🌐 User Browser    │
+                                                   │                      │
+                                                   │ - WebSocket/SSE      │
+                                                   │ - Real-time updates  │
+                                                   │ - Screenshot stream  │
+                                                   └──────────────┬───────┘
+                                                                  │
+                                                   ┌──────────────┼───────┐
+                                                   │              │       │
+                                       ┌───────────┘    HTTP/REST │       │
+                                       │                           │       │
+                    ┌──────────────────▼──────────────────┐        │       │
+                    │  🎨 ANGULAR FRONTEND               │        │       │
+                    │  (Firebase Hosting)                │        │       │
+                    │                                    │        │       │
+                    │  ┌──────────────────────────────┐ │        │       │
+                    │  │ - Task Form Component        │ │        │       │
+                    │  │ - Screenshot Viewer          │ │        │       │
+                    │  │ - Execution Log              │ │        │       │
+                    │  │ - Voice Input/Output Service │ │        │       │
+                    │  └──────────────────────────────┘ │        │       │
+                    │                                    │        │       │
+                    │  ┌──────────────────────────────┐ │        │       │
+                    │  │ Firebase Auth                │ │        │       │
+                    │  │ - Google Sign-in             │ │        │       │
+                    │  │ - Token Management           │ │        │       │
+                    │  └──────────────┬───────────────┘ │        │       │
+                    │                 │                 │        │       │
+                    └────────┬────────┼─────────────────┘        │       │
+                             │        │                          │       │
+                   ┌─────────┼────────┼──────────────┐            │       │
+                   │         │        │              │            │       │
+                   │ 1. User │ 2. Auth Token │ 3. JWT │         │       │
+                   │ Input   │ Exchange      │ Verify │         │       │
+                   │         │               │        │            │       │
+                   ▼         ▼               ▼        ▼            │       │
+┌────────────────────────────────────────────────────────────────┐        │
+│               ⚙️  NODE.JS BACKEND (Cloud Run)                 │        │
+│                                                               │        │
+│  ┌─────────────────────────────────────────────────────┐     │        │
+│  │ Express.js Server + Middleware                      │     │        │
+│  │ ├─ CORS, Auth, Logging                              │     │        │
+│  │ ├─ Request validation                               │     │        │
+│  │ └─ Error handling                                   │     │        │
+│  └─────────────────────────────────────────────────────┘     │        │
+│                         │                                      │        │
+│         ┌───────────────┼───────────────┐                     │        │
+│         │               │               │                     │        │
+│         ▼               ▼               ▼                     │        │
+│  ┌─────────────┐ ┌────────────┐ ┌────────────┐             │        │
+│  │ Agent       │ │ Voice      │ │ Auth       │             │        │
+│  │ Controller  │ │ Controller │ │ Controller │             │        │
+│  │             │ │            │ │            │             │        │
+│  │ - Execute   │ │ - STT      │ │ - Login    │             │        │
+│  │ - Status    │ │ - TTS      │ │ - User     │             │        │
+│  │ - History   │ │            │ │ - Logout   │             │        │
+│  └──────┬──────┘ └────────────┘ └────────────┘             │        │
+│         │                                                     │        │
+│         ▼                                                     │        │
+│  ┌─────────────────────────────────────────────────────┐     │        │
+│  │ 🧠 AGENT MANAGER (Orchestration Core)              │     │        │
+│  │                                                     │     │        │
+│  │ ┌──────────────────────────────────────────────┐   │     │        │
+│  │ │ Session Manager                              │   │     │        │
+│  │ │ - Session state tracking                     │   │     │        │
+│  │ │ - Browser pool management                    │   │     │        │
+│  │ │ - Active task monitoring                     │   │     │        │
+│  │ └──────────────────────────────────────────────┘   │     │        │
+│  │                     │                               │     │        │
+│  │                     ▼                               │     │        │
+│  │ ┌──────────────────────────────────────────────┐   │     │        │
+│  │ │ 🤖 GEMINI CLIENT                            │   │     │        │
+│  │ │                                              │   │     │        │
+│  │ │ Process:                                     │   │     │        │
+│  │ │ 1. Receive screenshot from Browser           │   │     │        │
+│  │ │ 2. Format multimodal request                 │   │     │        │
+│  │ │ 3. Send to Vertex AI (Gemini 2.0 Flash)      │   │     │        │
+│  │ │ 4. Receive structured decision (JSON)        │   │     │        │
+│  │ │ 5. Parse action & parameters                 │   │     │        │
+│  │ │ 6. Return to Agent Manager                   │   │     │        │
+│  │ │                                              │   │     │        │
+│  │ │ Features:                                    │   │     │        │
+│  │ │ - Vision: UI understanding                   │   │     │        │
+│  │ │ - Language: Task comprehension                │   │     │        │
+│  │ │ - Reasoning: Action planning                  │   │     │        │
+│  │ │ - State tracking: Remember context            │   │     │        │
+│  │ └────────────────┬────────────────────────────┘   │     │        │
+│  │                  │ 4. Screenshot +                │     │        │
+│  │                  │    Task description            │     │        │
+│  │                  │ 5. Action + Reasoning          │     │        │
+│  │                  │                                │     │        │
+│  │                  ▼                                │     │        │
+│  │ ┌──────────────────────────────────────────────┐   │     │        │
+│  │ │ 🔗 BROWSER CONTROLLER (Playwright)           │   │     │        │
+│  │ │                                              │   │     │        │
+│  │ │ Actions:                                     │   │     │        │
+│  │ │ - Click (buttons, links)                     │   │     │        │
+│  │ │ - Type (text input)                          │   │     │        │
+│  │ │ - Navigate (URL changes)                     │   │     │        │
+│  │ │ - Scroll (page navigation)                   │   │     │        │
+│  │ │ - Screenshot (capture state)                 │   │     │        │
+│  │ │                                              │   │     │        │
+│  │ │ State Management:                            │   │     │        │
+│  │ │ - Browser pool (10-20 instances)             │   │     │        │
+│  │ │ - Page load waiting                          │   │     │        │
+│  │ │ - Error recovery (retry on timeout)          │   │     │        │
+│  │ └────────────────┬─────────────────────────────┘   │     │        │
+│  │                  │                                 │     │        │
+│  └──────────────────┼─────────────────────────────────┘     │        │
+│                     │                                        │        │
+└─────────────────────┼────────────────────────────────────────┘        │
+                      │ 6. Interacts with                      │        │
+                      ▼ External websites                      │        │
+              ┌──────────────────┐                             │        │
+              │ 🌐 EXTERNAL      │                             │        │
+              │ WEBSITES         │                             │        │
+              │                  │                             │        │
+              │ - google.com     │                             │        │
+              │ - amazon.com     │                             │        │
+              │ - any website    │                             │        │
+              │                  │                             │        │
+              │ Returns:         │                             │        │
+              │ - Page updates   │                             │        │
+              │ - New content    │                             │        │
+              │ - Screenshots    │                             │        │
+              └────────────────────                             │        │
+                       │                                        │        │
+                       │ 7. Back to Agent Manager               │        │
+                       └────────────────────────────────────────┘        │
+                                   │                                     │
+                      ┌────────────┼────────────┐                        │
+                      │            │            │                        │
+                      ▼            ▼            ▼                        │
+         ┌─────────────────────────────────────────┐                   │
+         │ 💾 FIREBASE FIRESTORE (Database)        │                   │
+         │                                         │                   │
+         │ Collections:                            │                   │
+         │ ├─ /users/{userId}                      │                   │
+         │ │  ├─ auth profile                      │                   │
+         │ │  └─ preferences                       │                   │
+         │ ├─ /sessions/{sessionId}                │                   │
+         │ │  ├─ task description                  │                   │
+         │ │  ├─ status (running/completed)        │                   │
+         │ │  └─ metadata                          │                   │
+         │ └─ /history/{userId}/tasks              │                   │
+         │    ├─ completed task records            │                   │
+         │    ├─ step-by-step logs                 │                   │
+         │    └─ screenshots (base64)              │                   │
+         │                                         │                   │
+         │ 8. Store & Persist:                     │                   │
+         │ - Task completion records               │                   │
+         │ - User preferences                      │                   │
+         │ - Usage statistics                      │                   │
+         └─────────────────────────────────────────┘                   │
+                      │                                                  │
+                      │ 9. Fetch history & preferences                   │
+                      └──────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          🤖 GOOGLE CLOUD VERTEX AI                          │
+│                         (Gemini 2.0 Flash Model)                            │
+│                                                                             │
+│  REST API Endpoint: googleapis.com/aiplatform/v1beta1                      │
+│                                                                             │
+│  Input:                              Output:                               │
+│  ┌──────────────────────────┐        ┌────────────────────────┐           │
+│  │ - Image (Base64)         │        │ - Action type          │           │
+│  │ - Task description       │   →    │ - Target selector      │           │
+│  │ - Previous context       │        │ - Text values          │           │
+│  │ - System prompt          │        │ - Reasoning            │           │
+│  │ - Model: gemini-2.0-     │        │ - Confidence score     │           │
+│  │   flash                  │        │ - Next action hint     │           │
+│  └──────────────────────────┘        └────────────────────────┘           │
+│                                                                             │
+│  Capabilities:                                                              │
+│  ✓ Vision Understanding: Identify UI elements, buttons, text fields       │
+│  ✓ Language Understanding: Parse task description, interpret intent       │
+│  ✓ Reasoning: Plan next action, understand state                          │
+│  ✓ JSON Output: Structured action decisions                               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+COMPLETE DATA FLOW:
+═══════════════════
+
+User Input (Text/Voice)
+         │
+         ▼
+Frontend (Angular) ←────────────────┐ Firebase Auth
+         │                          │
+         │ HTTP POST /api/agent     │ Google Sign-in
+         │ {taskDescription, url}   │ Token Exchange
+         │                          │
+         ▼                          │
+Backend (Express)                   │
+    │                              │
+    ├─→ Validate JWT Token ────────┘
+    │
+    ├─→ Agent Manager
+    │   │
+    │   ├─→ Browser Controller
+    │   │   - Navigate to URL
+    │   │   - Take screenshot
+    │   │
+    │   └─→ Gemini Client
+    │       │
+    │       ├─→ Send Screenshot to Vertex AI (Gemini 2.0 Flash) 🤖
+    │       │
+    │       ├─→ Receive structured action decision
+    │       │
+    │       └─→ Parse decision → Return to Browser Controller
+    │
+    ├─→ Execute Browser Action
+    │
+    ├─→ Store in Firestore ────→ 💾 Database
+    │
+    └─→ Stream updates via SSE ────→ Frontend
+         (Real-time progress)
+         (Screenshots)
+         (Execution logs)
+
+SECURITY & AUTHENTICATION:
+══════════════════════════
+✓ Frontend: Firebase Auth (Google Sign-in)
+✓ Backend: JWT token validation on every request
+✓ Gemini: Service Account credentials (server-side only)
+✓ Database: Firestore rules (user-scoped access)
+✓ HTTPS: All communications encrypted
 ```
 
 ## Data Flow Diagram
 
-```mermaid
-sequenceDiagram
-    participant User as 👤 User
-    participant Frontend as 🎨 Frontend
-    participant Backend as ⚙️ Backend
-    participant Agent as 🧠 Agent
-    participant Gemini as 🤖 Gemini
-    participant Browser as 🔗 Browser
-    participant Target as 🌐 Target Site
-
-    User->>Frontend: 1. Enter task & URL
-    Frontend->>Backend: 2. POST /api/agent/execute
-    Backend->>Agent: 3. Initialize session
-    Agent->>Browser: 4. Navigate to URL
-    Browser->>Target: 5. Request page
-    Target->>Browser: 6. Load page
-    Browser->>Agent: 7. Take screenshot
-    Agent->>Gemini: 8. Analyze screenshot
-    Gemini->>Gemini: 9. Understand UI & plan action
-    Gemini->>Agent: 10. Return action decision
-    Agent->>Browser: 11. Execute action (click/type/scroll)
-    Browser->>Target: 12. Interact with page
-    Target->>Browser: 13. Page updates
-    Browser->>Agent: 14. Take screenshot
-    Agent->>Gemini: 15. Continue loop if task pending
-    
-    loop Until Task Complete
-        Gemini->>Gemini: Analyze & decide
-        Agent->>Browser: Execute action
-        Browser->>Target: Interact
-        Browser->>Agent: Take screenshot
-    end
-
-    Agent->>Browser: 16. Cleanup
-    Browser->>Agent: 17. Return results
-    Agent->>Backend: 18. Store completion
-    Backend->>Frontend: 19. Update via SSE
-    Frontend->>User: 20. Display results
+```
+👤 USER
+   │
+   │ 1. Enter task & URL
+   ▼
+┌─────────────────────────────────────────────┐
+│          🎨 ANGULAR FRONTEND                │
+│  Task Form → Voice Input → Send Task        │
+└────────────┬────────────────────────────────┘
+             │ 2. HTTP POST /api/agent/execute
+             ▼
+┌─────────────────────────────────────────────┐
+│          ⚙️  NODE.JS BACKEND                │
+│  Agent Controller → Initialize Session      │
+└────────────┬────────────────────────────────┘
+             │ 3. Start Agent Manager loop
+             ▼
+┌─────────────────────────────────────────────────┐
+│          🧠 AGENT MANAGER LOOP                  │
+│                                                 │
+│  4. Navigate to URL                             │
+│  5. Browser loads page                          │
+│  6. Take screenshot of loaded page              │
+│         │                                       │
+│         ▼                                       │
+│  ┌────────────────────────────────────────┐    │
+│  │ 8. Send screenshot + task to Gemini    │    │
+│  └─────────────────┬──────────────────────┘    │
+│                    │ 9. Analyze UI & plan       │
+│                    ▼                            │
+│  ┌────────────────────────────────────────┐    │
+│  │  🤖 GEMINI 2.0 FLASH (Multimodal)      │    │
+│  │  - Vision: Understand UI layout        │    │
+│  │  - Language: Interpret task            │    │
+│  │  - Reasoning: Plan next action         │    │
+│  └─────────────────┬──────────────────────┘    │
+│                    │ 10. Return action         │
+│                    ▼                            │
+│  ┌────────────────────────────────────────┐    │
+│ 11. │ BROWSER CONTROLLER (Playwright)     │    │
+│  │ - Execute: click/type/scroll/navigate  │    │
+│  └─────────────────┬──────────────────────┘    │
+│                    │ 12. Interact with page    │
+│                    ▼                            │
+│  ┌────────────────────────────────────────┐    │
+│  │  🌐 TARGET WEBSITE                     │    │
+│  │  13. Page updates                      │    │
+│  └─────────────────┬──────────────────────┘    │
+│                    │ 14. Take screenshot       │
+│                    ▼                            │
+│  ✓ Loop: Check if task complete                │
+│    ├─→ No → Return to step 8 (analyze)         │
+│    └─→ Yes → Go to step 16 (cleanup)           │
+└────────────┬────────────────────────────────────┘
+             │ 16. Cleanup & Store results
+             ▼
+┌─────────────────────────────────────────┐
+│      💾 FIRESTORE DATABASE              │
+│  18. Store task history & completion    │
+└────────────┬────────────────────────────┘
+             │ 19. SSE stream update
+             ▼
+┌─────────────────────────────────────────┐
+│      🎨 ANGULAR FRONTEND                │
+│  20. Display results + Screenshot       │
+└────────────┬────────────────────────────┘
+             │
+             ▼
+        👤 USER
+    (Sees results)
 ```
 
 ## Component Architecture
 
-```mermaid
-graph TD
-    App["App Module"]
-    
-    subgraph Presentation["Presentation Layer"]
-        Home["Home Component"]
-        Core["Core Components"]
-        Auth["Auth Flow"]
-    end
-
-    subgraph Components["Smart Components"]
-        TaskForm["TaskForm<br/>Input handling"]
-        Screenshot["Screenshot<br/>Real-time display"]
-        ExecLog["Execution Log<br/>Step tracking"]
-        States["State Components<br/>Idle/Loading"]
-    end
-
-    subgraph Services["Service Layer"]
-        Agent["Agent Service<br/>Task execution"]
-        API["API Service<br/>HTTP calls"]
-        Voice["Voice Service<br/>Audio I/O"]
-        Auth["Auth Service<br/>Firebase auth"]
-    end
-
-    subgraph State["State Management"]
-        AuthModal["Auth Modal Service<br/>BehaviorSubject"]
-        Observable["RxJS Observables<br/>app-wide state"]
-    end
-
-    App -->|Declares| Presentation
-    Presentation -->|Contains| Components
-    Presentation -->|Injects| Services
-    Components -->|Uses| Services
-    Services -->|Manages| State
-    Services -->|Calls| Observable
+```
+┌────────────────────────────────────────────────────────────────┐
+│                    📦 APP MODULE (Angular)                     │
+└────────────────────────┬─────────────────────────────────────────┘
+                         │
+        ┌────────────────┼────────────────┐
+        │                │                │
+        ▼                ▼                ▼
+┌──────────────────┐ ┌──────────────┐ ┌════════════════┐
+│  Home Component  │ │ Core         │ │ Auth Flow      │
+│                  │ │ Components   │ │                │
+│ - Dashboard      │ │              │ │ - Auth Modal   │
+│ - Main Layout    │ │ - Shared UI  │ │ - Sign In      │
+│ - Routing        │ └──────────────┘ │ - User Menu    │
+└────────┬─────────┘                   └────────┬───────┘
+         │         [ PRESENTATION LAYER ]       │
+         └─────────────┬──────────────────────────┘
+                       │ Inject & Use
+                       ▼
+┌──────────────────────────────────────────────────────────────┐
+│              📦 SMART COMPONENTS                             │
+│                                                              │
+│  ┌─────────────────┐  ┌─────────────────┐                  │
+│  │   TaskForm      │  │  Screenshot     │                  │
+│  │   Component     │  │  Viewer         │                  │
+│  │                 │  │                 │                  │
+│  │ - URL input     │  │ - Live display  │                  │
+│  │ - Task text     │  │ - Auto-refresh  │                  │
+│  │ - Speak button  │  │ - Base64 decode │                  │
+│  │ - Send button   │  │                 │                  │
+│  └────────┬────────┘  └────────┬────────┘                  │
+│           │                    │                            │
+│  ┌────────┴────────┐  ┌────────┴────────┐                 │
+│  │                 ▼  ▼                 │                 │
+│  │  ┌──────────────────────────────┐   │                 │
+│  │  │  Execution Log Component     │   │                 │
+│  │  │ - Step tracking              │   │                 │
+│  │  │ - Voice narration            │   │                 │
+│  │  │ - Timeline view              │   │                 │
+│  │  └──────────────────────────────┘   │                 │
+│  │                                      │                 │
+│  │  ┌──────────────────────────────┐   │                 │
+│  │  │  State Components            │   │                 │
+│  │  │ - Agent Idle State           │   │                 │
+│  │  │ - Agent Loading State        │   │                 │
+│  │  │ - Error States               │   │                 │
+│  │  └──────────────────────────────┘   │                 │
+│  └───────────┬──────────────────────────┘                 │
+└──────────────┼────────────────────────────────────────────┘
+               │ Use & Subscribe
+               ▼
+┌──────────────────────────────────────────────────────────────┐
+│              🔧 SERVICE LAYER                               │
+│                                                              │
+│  ┌──────────────────┐  ┌──────────────────┐               │
+│  │ Agent Service    │  │  API Service     │               │
+│  │                  │  │                  │               │
+│  │ - Execute task   │  │ - HTTP client    │               │
+│  │ - Get status     │  │ - Error handling │               │
+│  │ - Stream updates │  │ - Timeout mgmt   │               │
+│  └────────┬─────────┘  └────────┬─────────┘               │
+│           │                     │                          │
+│  ┌────────┴─────────┐  ┌────────┴───────────┐            │
+│  │                  ▼  ▼                    │            │
+│  │  ┌────────────────────────────────────┐ │            │
+│  │  │  Voice Service                     │ │            │
+│  │  │ - Speech Recognition (STT)         │ │            │
+│  │  │ - Speech Synthesis (TTS)           │ │            │
+│  │  └────────────────────────────────────┘ │            │
+│  │                                          │            │
+│  │  ┌────────────────────────────────────┐ │            │
+│  │  │  Auth Service                      │ │            │
+│  │  │ - Firebase Auth SDK                │ │            │
+│  │  │ - Token management                 │ │            │
+│  │  │ - User session                     │ │            │
+│  │  └────────────────────────────────────┘ │            │
+│  └───────────────┬──────────────────────────┘            │
+└──────────────────┼────────────────────────────────────────┘
+                   │ Manage & Notify
+                   ▼
+┌──────────────────────────────────────────────────────────────┐
+│              📊 STATE MANAGEMENT                            │
+│                                                              │
+│  ┌────────────────────────────────────┐                    │
+│  │ Auth Modal Service                 │                    │
+│  │ (BehaviorSubject)                  │                    │
+│  │ - Visibility state                 │                    │
+│  │ - Modal data                       │                    │
+│  └────────────────┬───────────────────┘                    │
+│                   │                                         │
+│  ┌────────────────┴────────────────┐                      │
+│  │                                 ▼                      │
+│  │  ┌──────────────────────────────────────┐              │
+│  │  │  RxJS Observables (App-wide State)   │              │
+│  │  │  - Task execution state              │              │
+│  │  │  - User authentication state         │              │
+│  │  │  - UI visibility state               │              │
+│  │  │  - Screenshot stream                 │              │
+│  │  └──────────────────────────────────────┘              │
+│  └──────────────────────────────────────────┘             │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ## Backend Architecture
 
-```mermaid
-graph TB
-    Express["Express Server<br/>Port 3001"]
-    
-    subgraph Middleware["Middleware Layer"]
-        CORS["CORS Handler"]
-        Auth["Auth Middleware<br/>JWT verification"]
-        Logger["Request Logger"]
-    end
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  🚀 EXPRESS.JS SERVER                           │
+│                       (Port 3001)                               │
+└────────────────────────┬──────────────────────────────────────────┘
+                         │ HTTP Requests
+                         ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                  🛡️  MIDDLEWARE LAYER                            │
+│                                                                  │
+│  ┌──────────────────┐  ┌──────────────┐  ┌────────────────┐   │
+│  │  CORS Handler    │  │ Auth         │  │ Request        │   │
+│  │                  │  │ Middleware   │  │ Logger         │   │
+│  │ - Origin check   │  │              │  │                │   │
+│  │ - Headers        │  │ - JWT verify │  │ - Logging      │   │
+│  │ - Methods        │  │ - User ctx   │  │ - Monitoring   │   │
+│  └────────┬─────────┘  └──────┬───────┘  └────────┬───────┘   │
+│           │                   │                   │             │
+└───────────┼───────────────────┼───────────────────┼─────────────┘
+            │                   │                   │
+            └───────────────────┼───────────────────┘
+                                ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                  📍 API ROUTES LAYER                             │
+│                                                                  │
+│  ┌──────────────────┐  ┌──────────────────┐                    │
+│  │ Agent Routes     │  │  Auth Routes     │                    │
+│  │ /api/agent/*     │  │  /api/auth/*     │                    │
+│  └────────┬─────────┘  └────────┬─────────┘                    │
+│           │                     │                               │
+│  ┌────────┴─────────┐  ┌────────┴──────────┐                  │
+│  │                  ▼  ▼                   │                  │
+│  │  ┌────────────────────────────────┐    │                  │
+│  │  │  Voice Routes                  │    │                  │
+│  │  │  /api/voice/*                  │    │                  │
+│  │  └────────────────────────────────┘    │                  │
+│  │                                         │                  │
+│  │  ┌────────────────────────────────┐    │                  │
+│  │  │  History Routes                │    │                  │
+│  │  │  /api/agent/history/*          │    │                  │
+│  │  └────────────────────────────────┘    │                  │
+│  └──────────────────┬───────────────────────┘                 │
+└─────────────────────┼──────────────────────────────────────────┘
+                      ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                  🎛️  CONTROLLERS LAYER                           │
+│                                                                  │
+│  ┌──────────────────┐  ┌──────────────────┐                    │
+│  │ Agent Controller │  │  Auth Controller │                    │
+│  │                  │  │                  │                    │
+│  │ - /execute task  │  │ - /login         │                    │
+│  │ - /get status    │  │ - /logout        │                    │
+│  │ - /stream        │  │ - /user info     │                    │
+│  └────────┬─────────┘  └────────┬─────────┘                    │
+│           │                     │                               │
+│  ┌────────┴────────────────────────┬──┐                        │
+│  │                                 ▼  │                        │
+│  │  ┌──────────────────────────────┐ │                        │
+│  │  │  Voice Controller            │ │                        │
+│  │  │                              │ │                        │
+│  │  │ - /transcribe (STT)          │ │                        │
+│  │  │ - /synthesize (TTS)          │ │                        │
+│  │  └──────────────────────────────┘ │                        │
+│  └───────────────────────────────────┘                         │
+└──────────────────┬───────────────────────────────────────────────┘
+                   ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                  ⚙️  MANAGERS & UTILITIES                         │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                 Agent Manager                            │   │
+│  │  ┌──────────────────────────────────────────────────┐    │   │
+│  │  │ Orchestrates the AI decision loop:               │    │   │
+│  │  │  1. Take screenshot via Browser Controller       │    │   │
+│  │  │  2. Send to Gemini for analysis                 │    │   │
+│  │  │  3. Get action decision                         │    │   │
+│  │  │  4. Execute browser action                      │    │   │
+│  │  │  5. Update session state                        │    │   │
+│  │  │  6. Store step in history                       │    │   │
+│  │  └──────────────────────────────────────────────────┘    │   │
+│  └────────────┬───────────────────────────────────────────────┘   │
+│               │                                                    │
+│  ┌────────────┴────────────────┬─────────────────────────┐        │
+│  │                             ▼                         │        │
+│  │  ┌──────────────────────────────────────────────┐     │        │
+│  │  │  Session Manager                            │     │        │
+│  │  │ - In-memory store                           │     │        │
+│  │  │ - Track active tasks                        │     │        │
+│  │  │ - Manage browser pools                      │     │        │
+│  │  │ - Clean up expired sessions                 │     │        │
+│  │  └──────────────────────────────────────────────┘     │        │
+│  │                                                        │        │
+│  │  ┌──────────────────────────────────────────────┐     │        │
+│  │  │  History Manager                            │     │        │
+│  │  │ - Persist to Firestore                      │     │        │
+│  │  │ - Fetch user task history                   │     │        │
+│  │  │ - Delete old records                        │     │        │
+│  │  └──────────────────────────────────────────────┘     │        │
+│  │                                                        │        │
+│  │  ┌──────────────────────────────────────────────┐     │        │
+│  │  │  Task Queue                                 │     │        │
+│  │  │ - Job scheduler                             │     │        │
+│  │  │ - Rate limiting                             │     │        │
+│  │  │ - Retry logic                               │     │        │
+│  │  └──────────────────────────────────────────────┘     │        │
+│  └────────────┬────────────────────────────────────┘        │
+└─────────────────┼────────────────────────────────────────────┘
+                  ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                  🧠 INTELLIGENCE CORE                            │
+│                                                                  │
+│  ┌──────────────────────────┐  ┌────────────────────────────┐  │
+│  │  Gemini Client           │  │  Browser Controller        │  │
+│  │                          │  │                            │  │
+│  │ - Multimodal analysis    │  │ - Playwright integration   │  │
+│  │ - Vision understanding   │  │ - Browser pool management  │  │
+│  │ - Decision making        │  │ - Screenshot capture       │  │
+│  │ - JSON output parsing    │  │ - Action execution        │  │
+│  │ - Error handling         │  │ - Navigation handling      │  │
+│  │ - Rate limiting          │  │ - Auto-recovery logic      │  │
+│  └────────┬─────────────────┘  └────────┬───────────────────┘  │
+│           │                            │                        │
+└───────────┼────────────────────────────┼────────────────────────┘
+            │                            │
+     Uses  │                            │ Uses
+            ▼                            ▼
+┌─────────────────────────────┐  ┌──────────────────────────────┐
+│  Google Cloud Vertex AI     │  │  Chromium Browser            │
+│                             │  │  (Headless)                  │
+│  - Gemini 2.0 Flash API     │  │                              │
+│  - REST endpoint            │  │  - Page rendering            │
+│  - Multimodal processing    │  │  - JavaScript execution      │
+│  - Vision + Language        │  │  - Screenshot creation       │
+│                             │  │  - Form interaction          │
+└─────────────────────────────┘  └──────────────────────────────┘
+            │                            │
+            │ Calls                      │ Automates
+            └────┬───────────────────────┘
+                 ▼
+         ┌───────────────────┐
+         │  External         │
+         │  Websites         │
+         │                   │
+         │ - google.com      │
+         │ - amazon.com      │
+         │ - any website     │
+         └───────────────────┘
 
-    subgraph Routes["API Routes"]
-        AgentR["Agent Routes<br/>/api/agent/*"]
-        AuthR["Auth Routes<br/>/api/auth/*"]
-        VoiceR["Voice Routes<br/>/api/voice/*"]
-        HistoryR["History Routes<br/>/api/agent/history/*"]
-    end
+           Back to Storage ↓
 
-    subgraph Controllers["Controllers"]
-        AgentC["Agent Controller<br/>Task execution"]
-        AuthC["Auth Controller<br/>User management"]
-        VoiceC["Voice Controller<br/>Audio processing"]
-    end
-
-    subgraph Managers["Managers & Utils"]
-        AgentMgr["Agent Manager<br/>Orchestration"]
-        SessionMgr["Session Manager<br/>In-memory store"]
-        HistoryMgr["History Manager<br/>DB persistence"]
-        Queue["Task Queue<br/>Job scheduler"]
-    end
-
-    subgraph Intelligence["Intelligence Core"]
-        GeminiClient["Gemini Client<br/>Multimodal analysis"]
-        BrowserCtl["Browser Controller<br/>Playwright automation"]
-    end
-
-    subgraph Database["Data Persistence"]
-        Firebase["Firebase Firestore<br/>Task history"]
-        Cache["Memory Cache<br/>Session data"]
-    end
-
-    Express -->|Passes through| Middleware
-    Middleware -->|Routes to| Routes
-    Routes -->|Calls| Controllers
-    Controllers -->|Uses| Managers
-    Managers -->|Coordinates| Intelligence
-    Intelligence -->|Reads/Writes| Database
-    Intelligence -->|GCS Vertex AI| GCP["Google Cloud<br/>APIs"]
+┌──────────────────────────────────────────────────────────────────┐
+│                  💾 DATA PERSISTENCE LAYER                       │
+│                                                                  │
+│  ┌──────────────────────────┐  ┌─────────────────────────────┐ │
+│  │  Memory Cache            │  │  Firebase Firestore         │ │
+│  │  (Session Manager)       │  │  (Real Database)            │ │
+│  │                          │  │                             │ │
+│  │ - Active sessions        │  │ - Task history              │ │
+│  │ - Browser pools          │  │ - User preferences          │ │
+│  │ - Real-time state        │  │ - Usage statistics          │ │
+│  │ - Short-lived (in-RAM)   │  │ - Long-term persistence    │ │
+│  └──────────────────────────┘  └─────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ## Technology Stack
