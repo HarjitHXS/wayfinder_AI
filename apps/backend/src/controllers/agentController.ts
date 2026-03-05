@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { AuthRequest } from '../middleware/auth';
 import { saveTask } from '../utils/historyManager';
 import { isFirebaseEnabled } from '../firebase/admin';
+import { TaskExecution } from '../types';
 
 interface ExecuteRequest {
   taskDescription: string;

@@ -76,9 +76,16 @@ export function validateTaskInput(req: AuthRequest, res: Response, next: NextFun
   if (!startUrl || typeof startUrl !== 'string') {
     return res.status(400).json({ error: 'Invalid startUrl' });
   }
+
+  // Normalize URL input to avoid downstream issues with trailing slashes
+  const normalizedStartUrl = startUrl.trim().replace(/\/+$/, '');
+  if (!normalizedStartUrl) {
+    return res.status(400).json({ error: 'Invalid startUrl' });
+  }
+  req.body.startUrl = normalizedStartUrl;
   
   try {
-    const url = new URL(startUrl);
+    const url = new URL(normalizedStartUrl);
     
     // Prevent SSRF attacks - only allow http/https
     if (!['http:', 'https:'].includes(url.protocol)) {
