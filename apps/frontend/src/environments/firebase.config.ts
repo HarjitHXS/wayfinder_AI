@@ -29,3 +29,12 @@ export const firebaseConfig: FirebaseConfigType = {
   messagingSenderId: getConfigValue('FIREBASE_MESSAGING_SENDER_ID'),
   appId: getConfigValue('FIREBASE_APP_ID'),
 };
+
+export const isFirebaseConfigured = (): boolean => {
+  return Boolean(
+    firebaseConfig.apiKey &&
+    firebaseConfig.authDomain &&
+    firebaseConfig.projectId &&
+    firebaseConfig.appId
+  );
+};

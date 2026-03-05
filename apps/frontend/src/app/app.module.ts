@@ -6,7 +6,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { provideAuth, getAuth } from '@angular/fire/auth';
-import { firebaseConfig } from '../environments/firebase.config';
+import { firebaseConfig, isFirebaseConfigured } from '../environments/firebase.config';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { TaskFormComponent } from './components/task-form/task-form.component';
@@ -19,6 +19,13 @@ import { AgentLoadingStateComponent } from './components/agent-loading-state/age
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 import { AuthModalComponent } from './components/auth-modal/auth-modal.component';
 import { TaskHistoryComponent } from './components/task-history/task-history.component';
+
+const firebaseProviders = isFirebaseConfigured()
+  ? [
+      provideFirebaseApp(() => initializeApp(firebaseConfig)),
+      provideAuth(() => getAuth())
+    ]
+  : [];
 
 @NgModule({
   declarations: [
@@ -44,8 +51,7 @@ import { TaskHistoryComponent } from './components/task-history/task-history.com
     AppRoutingModule
   ],
   providers: [
-    provideFirebaseApp(() => initializeApp(firebaseConfig)),
-    provideAuth(() => getAuth())
+    ...firebaseProviders
   ],
   bootstrap: [AppComponent]
 })

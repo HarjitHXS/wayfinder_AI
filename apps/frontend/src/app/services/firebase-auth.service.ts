@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Optional } from '@angular/core';
 import { Auth, authState, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signOut, User, getIdToken } from '@angular/fire/auth';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 export interface UserProfile {
@@ -18,7 +18,15 @@ export class FirebaseAuthService {
   public user$: Observable<User | null>;
   public userProfile$: BehaviorSubject<UserProfile | null> = new BehaviorSubject<UserProfile | null>(null);
 
-  constructor(private auth: Auth) {
+  private readonly authUnavailableMessage = 'Authentication is not configured for this deployment.';
+
+  constructor(@Optional() private auth: Auth | null) {
+    if (!this.auth) {
+      this.user$ = of(null);
+      this.userProfile$.next(null);
+      return;
+    }
+
     this.user$ = authState(this.auth);
     
     // Subscribe to user changes
@@ -41,6 +49,10 @@ export class FirebaseAuthService {
    * Sign in with Google
    */
   async signInWithGoogle(): Promise<void> {
+    if (!this.auth) {
+      throw new Error(this.authUnavailableMessage);
+    }
+
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(this.auth, provider);
@@ -54,6 +66,10 @@ export class FirebaseAuthService {
    * Sign in with email and password
    */
   async signInWithEmail(email: string, password: string): Promise<void> {
+    if (!this.auth) {
+      throw new Error(this.authUnavailableMessage);
+    }
+
     try {
       await signInWithEmailAndPassword(this.auth, email, password);
     } catch (error) {
@@ -66,6 +82,10 @@ export class FirebaseAuthService {
    * Sign up with email and password
    */
   async signUpWithEmail(email: string, password: string, displayName?: string): Promise<void> {
+    if (!this.auth) {
+      throw new Error(this.authUnavailableMessage);
+    }
+
     try {
       const result = await createUserWithEmailAndPassword(this.auth, email, password);
       
@@ -84,6 +104,11 @@ export class FirebaseAuthService {
    * Sign out the current user
    */
   async signOut(): Promise<void> {
+    if (!this.auth) {
+      this.userProfile$.next(null);
+      return;
+    }
+
     try {
       await signOut(this.auth);
       this.userProfile$.next(null);
@@ -97,6 +122,8 @@ export class FirebaseAuthService {
    * Get the current user's ID token
    */
   async getIdToken(): Promise<string | null> {
+    if (!this.auth) return null;
+
     const user = this.auth.currentUser;
     if (!user) return null;
     try {
@@ -111,6 +138,10 @@ export class FirebaseAuthService {
    * Check if user is authenticated
    */
   isAuthenticated(): Observable<boolean> {
+    if (!this.auth) {
+      return of(false);
+    }
+
     return this.user$.pipe(
       map(user => !!user)
     );
@@ -120,6 +151,8 @@ export class FirebaseAuthService {
    * Get current user (synchronous, may be null)
    */
   getCurrentUser(): User | null {
+    if (!this.auth) return null;
+
     return this.auth.currentUser;
   }
 }
